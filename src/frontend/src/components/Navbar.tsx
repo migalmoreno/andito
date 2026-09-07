@@ -23,7 +23,11 @@ export const SharedNavbarSubMenu = () => {
           })
         }
       />
-      <Link href="/" className="font-bold text-lg text-white px-4">
+      <Link
+        href="/"
+        className="font-bold text-lg text-white px-4 flex items-center gap-x-2"
+      >
+        <img src="/andito.svg" alt="" className="size-5 invert" />
         Andito
       </Link>
     </div>
