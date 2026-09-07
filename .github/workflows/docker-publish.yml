@@ -34,8 +34,8 @@ jobs:
         with:
           push: true
           set: |
-            frontend.tags=ghcr.io/migalmoreno/alegoria-frontend:latest
-            backend.tags=ghcr.io/migalmoreno/alegoria-backend:latest
+            frontend.tags=ghcr.io/migalmoreno/andito-frontend:latest
+            backend.tags=ghcr.io/migalmoreno/andito-backend:latest
             *.platform+=linux/amd64
             *.platform+=linux/arm64
             *.cache-from=type=gha

@@ -1,6 +1,6 @@
 services:
   frontend:
-    container_name: alegoria_frontend
+    container_name: andito_frontend
     build:
       context: .
       dockerfile: ./docker/frontend/Dockerfile
@@ -12,7 +12,7 @@ services:
       - backend
     restart: unless-stopped
   backend:
-    container_name: alegoria_backend
+    container_name: andito_backend
     build:
       context: .
       dockerfile: ./docker/backend/Dockerfile

@@ -37,10 +37,10 @@ jobs:
           source: "."
           push: true
           set: |
-            frontend.tags=${{ env.REGISTRY }}/migalmoreno/alegoria-frontend:latest
-            backend.tags=${{ env.REGISTRY }}/migalmoreno/alegoria-backend:latest
+            frontend.tags=${{ env.REGISTRY }}/migalmoreno/andito-frontend:latest
+            backend.tags=${{ env.REGISTRY }}/migalmoreno/andito-backend:latest
             *.cache-from=type=gha
             *.cache-to=type=gha,mode=max
 
       - name: Deploy
-        run: curl ${{ vars.WEBHOOK_URL }}/hooks/alegoria-deploy
+        run: curl ${{ vars.WEBHOOK_URL }}/hooks/andito-deploy

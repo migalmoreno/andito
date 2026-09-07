@@ -22,4 +22,4 @@ WORKDIR /app
 COPY --from=build /app/.venv ./.venv
 ENV PATH="/app/.venv/bin:$PATH"
 
-CMD gunicorn -w 4 -b :5000 "alegoria:create_app()"
+CMD gunicorn -w 4 -b :5000 "andito:create_app()"

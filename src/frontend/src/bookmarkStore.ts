@@ -3,8 +3,20 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { get, set, del } from "idb-keyval";
 import type { StateStorage } from "zustand/middleware";
 
+const LEGACY_BOOKMARKS_KEY = "alegoria-bookmarks";
+
 const idbStorage: StateStorage = {
-  getItem: async (name) => (await get<string>(name)) ?? null,
+  getItem: async (name) => {
+    const value = await get<string>(name);
+    if (value != null) return value;
+
+    const legacy = await get<string>(LEGACY_BOOKMARKS_KEY);
+    if (legacy != null) {
+      await set(name, legacy);
+      await del(LEGACY_BOOKMARKS_KEY);
+    }
+    return legacy ?? null;
+  },
   setItem: async (name, value) => set(name, value),
   removeItem: async (name) => del(name),
 };
@@ -45,7 +57,7 @@ export const useBookmarkStore = create<BookmarkStore>()(
       isBookmarked: (url) => get().bookmarks.some((b) => b.url === url),
     }),
     {
-      name: "alegoria-bookmarks",
+      name: "andito-bookmarks",
       storage: createJSONStorage(() => idbStorage),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);

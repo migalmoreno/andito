@@ -1,13 +1,13 @@
 # -*- mode: org; org-html-head-include-default-style: nil; org-html-postamble: nil; -*-
 #+OPTIONS: toc:nil num:nil
-#+title: alegoria
-Alegoria is a web aggregator for image galleries and collections from several hosting sites.
+#+title: andito
+Andito is a web aggregator for image galleries and collections from several hosting sites.
 
 * Installation
 There's a Docker Compose file available which you can run locally like this:
 
 #+begin_src sh
-cd /path/to/alegoria
+cd /path/to/andito
 docker compose up -d
 #+end_src
 

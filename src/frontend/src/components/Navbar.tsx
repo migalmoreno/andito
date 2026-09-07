@@ -24,7 +24,7 @@ export const SharedNavbarSubMenu = () => {
         }
       />
       <Link href="/" className="font-bold text-lg text-white px-4">
-        Alegoria
+        Andito
       </Link>
     </div>
   );

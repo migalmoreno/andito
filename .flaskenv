@@ -1,1 +1,1 @@
-FLASK_APP=alegoria
+FLASK_APP=andito

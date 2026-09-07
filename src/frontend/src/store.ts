@@ -1,6 +1,25 @@
 import { create } from "zustand";
 import { Category, Extractor, SubCategory } from "./types";
-import { persist, redux } from "zustand/middleware";
+import { persist, redux, createJSONStorage } from "zustand/middleware";
+import type { StateStorage } from "zustand/middleware";
+
+const LEGACY_STORE_KEY = "alegoria";
+
+const localStorageWithLegacyFallback: StateStorage = {
+  getItem: (name) => {
+    const value = localStorage.getItem(name);
+    if (value != null) return value;
+
+    const legacy = localStorage.getItem(LEGACY_STORE_KEY);
+    if (legacy != null) {
+      localStorage.setItem(name, legacy);
+      localStorage.removeItem(LEGACY_STORE_KEY);
+    }
+    return legacy;
+  },
+  setItem: (name, value) => localStorage.setItem(name, value),
+  removeItem: (name) => localStorage.removeItem(name),
+};
 
 interface AppState {
   categories: Category[];
@@ -60,8 +79,9 @@ const initialState: AppState = {
 
 export const useAppStore = create<AppStore>()(
   persist(redux(appReducer, initialState), {
-    name: "alegoria",
+    name: "andito",
     version: 0.5,
+    storage: createJSONStorage(() => localStorageWithLegacyFallback),
     partialize: (state) => ({
       activeCategory: state.activeCategory,
       activeSubCategory: state.activeSubCategory,
