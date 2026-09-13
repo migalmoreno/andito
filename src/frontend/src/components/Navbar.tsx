@@ -293,7 +293,7 @@ export const Navbar = () => {
     <div className="flex items-center min-h-[60px] bg-black w-full sticky top-0 right-0 justify-between text-white p-2 z-10 border-neutral-800 border-b">
       {showSearchForm ? (
         <Button
-          extraClassName="z-10 mr-2"
+          extraClassName="z-10 mr-2 max-md:p-1.5"
           icon={<ArrowLeft />}
           onClick={() => dispatch({ type: "showSearchForm", show: false })}
         />
