@@ -179,6 +179,11 @@ class ThreadResponse(TypedDict):
     nextUrl: NotRequired[str]
 
 
+class EmptyResponse(TypedDict, total=False):
+    nsfw: bool
+    searchable: bool
+
+
 NormalizedResponse = (
     GalleryResponse
     | ImageResponse
@@ -192,36 +197,38 @@ NormalizedResponse = (
 
 def _normalize_27b9c082_67b6f7ae(data, base_url, url, sub_hash) -> GalleryResponse:
     meta = data.get("metadata", [])
-    return {
-        "renderer": "gallery",
-        "items": [
-            {
-                "thumbnail": (post.get("thumbnail") or {}).get("original"),
-                "url": post.get("url"),
-            }
+    return GalleryResponse(
+        renderer="gallery",
+        items=[
+            GalleryItem(
+                thumbnail=(post.get("thumbnail") or {}).get("original"),
+                url=post.get("url"),
+            )
             for post in meta
         ],
-    }
+    )
 
 
-def _normalize_27b9c082_4b1b2ee4(data, base_url, url, sub_hash) -> ImageResponse | dict:
+def _normalize_27b9c082_4b1b2ee4(
+    data, base_url, url, sub_hash
+) -> ImageResponse | EmptyResponse:
     meta = data.get("metadata", [])
     if not meta:
-        return {}
+        return EmptyResponse()
     post = meta[0]
-    return {
-        "renderer": "image",
-        "url": post["thumbnail"]["original"],
-        "description": post.get("content"),
-        "authorName": post["creator"]["vanity"],
-        "authorUrl": post["creator"]["url"],
-        "authorThumbnail": post["campaign"]["avatar_photo_url"],
+    return ImageResponse(
+        renderer="image",
+        url=post["thumbnail"]["original"],
+        description=post.get("content"),
+        authorName=post["creator"]["vanity"],
+        authorUrl=post["creator"]["url"],
+        authorThumbnail=post["campaign"]["avatar_photo_url"],
         **(
             {"width": post.get("width"), "height": post.get("height")}
             if post.get("width") and post.get("height")
             else {}
         ),
-    }
+    )
 
 
 def _normalize_5c6e7131_9d8e01de(data, base_url, url, sub_hash) -> GalleryResponse:
@@ -231,189 +238,199 @@ def _normalize_5c6e7131_9d8e01de(data, base_url, url, sub_hash) -> GalleryRespon
         if sub_urls:
             data = download_post(sub_urls[0])
             meta = data.get("metadata", [])
-    return {
-        "renderer": "gallery",
-        "items": [
-            {
-                "thumbnail": post.get("url"),
-                "url": f"{base_url}/photo/?fbid={post['id']}&set={post['set_id']}",
-            }
+    return GalleryResponse(
+        renderer="gallery",
+        items=[
+            GalleryItem(
+                thumbnail=post.get("url"),
+                url=f"{base_url}/photo/?fbid={post['id']}&set={post['set_id']}",
+            )
             for post in meta
             if post.get("id")
         ],
-    }
+    )
 
 
-def _normalize_5c6e7131_dc1d7def(data, base_url, url, sub_hash) -> ImageResponse | dict:
+def _normalize_5c6e7131_dc1d7def(
+    data, base_url, url, sub_hash
+) -> ImageResponse | EmptyResponse:
     meta = data.get("metadata", [])
     if not meta:
-        return {}
+        return EmptyResponse()
     post = meta[0]
-    return {
-        "renderer": "image",
-        "url": post.get("url"),
-        "description": post.get("caption"),
-        "date": post.get("date"),
-        "authorName": post.get("username"),
-        "authorUrl": f"{base_url}/{post['user_id']}",
+    return ImageResponse(
+        renderer="image",
+        url=post.get("url"),
+        description=post.get("caption"),
+        date=post.get("date"),
+        authorName=post.get("username"),
+        authorUrl=f"{base_url}/{post['user_id']}",
         **(
             {"width": post.get("width"), "height": post.get("height")}
             if post.get("width") and post.get("height")
             else {}
         ),
-    }
+    )
 
 
 def _normalize_e88db17b_a3848f58(data, base_url, url, sub_hash) -> UserProfileResponse:
     urls = data.get("urls", [])
-    return {
-        "renderer": "user-profile",
-        "avatarUrl": next((u for u in urls if "info" in u), None),
-        "galleryUrl": next((u for u in urls if "posts" in u), None),
-        "galleryRenderer": "gallery",
-    }
+    return UserProfileResponse(
+        renderer="user-profile",
+        avatarUrl=next((u for u in urls if "info" in u), None),
+        galleryUrl=next((u for u in urls if "posts" in u), None),
+        galleryRenderer="gallery",
+    )
 
 
 def _normalize_e88db17b_7f691ebf(
     data, base_url, url, sub_hash
-) -> UserInfoResponse | dict:
+) -> UserInfoResponse | EmptyResponse:
     posts = data.get("post", [])
     if not posts:
-        return {}
+        return EmptyResponse()
     p = posts[0]
-    return {
-        "renderer": "user-info",
-        "name": p.get("username"),
-        "thumbnail": p.get("profile_pic_url_hd"),
-        "category": p.get("category_name"),
-        "bio": p.get("biography"),
-        "private": p.get("is_private"),
-        "nickname": p.get("full_name"),
-        "stats": {
-            "mediaCount": (p.get("edge_owner_to_timeline_media") or {}).get("count"),
-            "followers": (p.get("edge_followed_by") or {}).get("count"),
-            "following": (p.get("edge_follow") or {}).get("count"),
-        },
-    }
+    return UserInfoResponse(
+        renderer="user-info",
+        name=p.get("username"),
+        thumbnail=p.get("profile_pic_url_hd"),
+        category=p.get("category_name"),
+        bio=p.get("biography"),
+        private=p.get("is_private"),
+        nickname=p.get("full_name"),
+        stats=UserInfoStats(
+            mediaCount=(p.get("edge_owner_to_timeline_media") or {}).get("count"),
+            followers=(p.get("edge_followed_by") or {}).get("count"),
+            following=(p.get("edge_follow") or {}).get("count"),
+        ),
+    )
 
 
 def _normalize_e88db17b_cf001e7a(data, base_url, url, sub_hash) -> GalleryResponse:
     meta = data.get("metadata", [])
     urls = data.get("urls", [])
-    return {
-        "renderer": "gallery",
-        "items": [
-            {
-                "thumbnail": urls[i] if i < len(urls) else None,
-                "url": m.get("post_url"),
-            }
+    return GalleryResponse(
+        renderer="gallery",
+        items=[
+            GalleryItem(
+                thumbnail=urls[i] if i < len(urls) else None,
+                url=m.get("post_url"),
+            )
             for i, m in enumerate(meta)
         ],
-    }
+    )
 
 
-def _normalize_e88db17b_3182dbad(data, base_url, url, sub_hash) -> ImageResponse | dict:
+def _normalize_e88db17b_3182dbad(
+    data, base_url, url, sub_hash
+) -> ImageResponse | EmptyResponse:
     meta = data.get("metadata", [])
     if not meta:
-        return {}
+        return EmptyResponse()
     m = meta[0]
     video_url = m.get("video_url")
-    return {
-        "renderer": "image",
-        "url": video_url or m.get("display_url"),
-        "type": "video" if video_url else "image",
+    return ImageResponse(
+        renderer="image",
+        url=video_url or m.get("display_url"),
+        type="video" if video_url else "image",
         **(
             {"videoUrl": video_url, "posterUrl": m.get("display_url")}
             if video_url
             else {}
         ),
-        "description": m.get("description"),
-        "authorName": m.get("username"),
+        description=m.get("description"),
+        authorName=m.get("username"),
         **({"authorUrl": f"{base_url}/{m['username']}"} if m.get("username") else {}),
-        "date": m.get("date"),
-        **({"stats": {"likes": m["likes"]}} if m.get("likes") is not None else {}),
+        date=m.get("date"),
+        **(
+            {"stats": ImageStats(likes=m["likes"])}
+            if m.get("likes") is not None
+            else {}
+        ),
         **(
             {"width": m.get("width"), "height": m.get("height")}
             if m.get("width") and m.get("height")
             else {}
         ),
-    }
+    )
 
 
 def _normalize_f3a30c28_3418ee8b(data, base_url, url, sub_hash) -> UserProfileResponse:
     urls = data.get("urls", [])
-    return {
-        "renderer": "user-profile",
-        "avatarUrl": next((u for u in urls if "avatar" in u), None),
-        "galleryUrl": next((u for u in urls if "gallery" in u), None),
-        "galleryRenderer": "gallery",
-    }
+    return UserProfileResponse(
+        renderer="user-profile",
+        avatarUrl=next((u for u in urls if "avatar" in u), None),
+        galleryUrl=next((u for u in urls if "gallery" in u), None),
+        galleryRenderer="gallery",
+    )
 
 
 def _normalize_f3a30c28_246f9606(data, base_url, url, sub_hash) -> GalleryResponse:
     meta = data.get("metadata", [])
     urls = data.get("urls", [])
-    return {
-        "renderer": "gallery",
-        "items": [
-            {
-                "thumbnail": urls[i] if i < len(urls) else None,
-                "url": f"{base_url}/{post['user']}/{'video' if post.get('video') else 'media'}/{post['id']}",
-            }
+    return GalleryResponse(
+        renderer="gallery",
+        items=[
+            GalleryItem(
+                thumbnail=urls[i] if i < len(urls) else None,
+                url=f"{base_url}/{post['user']}/{'video' if post.get('video') else 'media'}/{post['id']}",
+            )
             for i, post in enumerate(meta)
         ],
-    }
+    )
 
 
 def _normalize_f3a30c28_6b6a3fc1(data, base_url, url, sub_hash) -> UserInfoResponse:
     meta = data.get("metadata", [])
     urls = data.get("urls", [])
-    return {
-        "renderer": "user-info",
-        "name": meta[0].get("user") if meta else None,
-        "thumbnail": urls[0] if urls else None,
-    }
+    return UserInfoResponse(
+        renderer="user-info",
+        name=meta[0].get("user") if meta else None,
+        thumbnail=urls[0] if urls else None,
+    )
 
 
-def _normalize_f3a30c28_77240af5(data, base_url, url, sub_hash) -> ImageResponse | dict:
+def _normalize_f3a30c28_77240af5(
+    data, base_url, url, sub_hash
+) -> ImageResponse | EmptyResponse:
     meta = data.get("metadata", [])
     if not meta:
-        return {}
+        return EmptyResponse()
     m = meta[0]
     posts = data.get("post", [])
     p = posts[0] if posts else {}
     urls = data.get("urls", [])
-    return {
-        "renderer": "image",
-        "url": urls[0] if urls else None,
-        "authorName": p.get("user"),
-        "filename": m.get("filename"),
-        "date": m.get("date"),
-        "description": m.get("description"),
-        "authorUrl": f"{base_url}/{p.get('user')}",
+    return ImageResponse(
+        renderer="image",
+        url=urls[0] if urls else None,
+        authorName=p.get("user"),
+        filename=m.get("filename"),
+        date=m.get("date"),
+        description=m.get("description"),
+        authorUrl=f"{base_url}/{p.get('user')}",
         **(
             {"width": m.get("width"), "height": m.get("height")}
             if m.get("width") and m.get("height")
             else {}
         ),
-    }
+    )
 
 
 def _normalize_c0d3c7b1_1776446d(data, base_url, url, sub_hash) -> GalleryResponse:
     meta = data.get("metadata", [])
-    return {
-        "renderer": "gallery",
-        "items": [
-            {
-                "thumbnail": post.get("url"),
-                "url": f"{base_url}/pin/{post['id']}",
-                "name": post.get("title") or post.get("grid_title"),
-                "authorName": post["pinner"]["username"],
-                "authorThumbnail": post["pinner"]["image_small_url"],
-                "authorUrl": f"{base_url}/{post['pinner']['username']}",
-                "groupName": (post.get("board") or {}).get("name"),
-                "groupThumbnail": (post.get("board") or {}).get("image_cover_url"),
-                "groupUrl": (
+    return GalleryResponse(
+        renderer="gallery",
+        items=[
+            GalleryItem(
+                thumbnail=post.get("url"),
+                url=f"{base_url}/pin/{post['id']}",
+                name=post.get("title") or post.get("grid_title"),
+                authorName=post["pinner"]["username"],
+                authorThumbnail=post["pinner"]["image_small_url"],
+                authorUrl=f"{base_url}/{post['pinner']['username']}",
+                groupName=(post.get("board") or {}).get("name"),
+                groupThumbnail=(post.get("board") or {}).get("image_cover_url"),
+                groupUrl=(
                     f"{base_url}{post['board']['url']}" if post.get("board") else None
                 ),
                 **(
@@ -426,227 +443,231 @@ def _normalize_c0d3c7b1_1776446d(data, base_url, url, sub_hash) -> GalleryRespon
                     if post.get("reaction_counts")
                     else {}
                 ),
-            }
+            )
             for post in meta
         ],
-    }
+    )
 
 
 def _normalize_c0d3c7b1_1692405e(data, base_url, url, sub_hash) -> GroupBoardResponse:
     meta = data.get("metadata", [])
-    return {
-        "renderer": "group-board",
-        "items": [
-            {
-                "name": post.get("name"),
-                "thumbnail": post.get("image_cover_url"),
-                "url": f"{base_url}{post['url']}",
-                "count": post.get("pin_count"),
-                "date": post.get("created_at"),
-            }
+    return GroupBoardResponse(
+        renderer="group-board",
+        items=[
+            BoardItem(
+                name=post.get("name"),
+                thumbnail=post.get("image_cover_url"),
+                url=f"{base_url}{post['url']}",
+                count=post.get("pin_count"),
+                date=post.get("created_at"),
+            )
             for post in meta
         ],
-    }
+    )
 
 
 def _normalize_c0d3c7b1_22c9473f(data, base_url, url, sub_hash) -> GalleryResponse:
     meta = data.get("metadata", [])
-    return {
-        "renderer": "gallery",
-        "items": [
-            {
-                "thumbnail": post.get("url"),
-                "url": f"{base_url}{post['seo_url']}",
-            }
+    return GalleryResponse(
+        renderer="gallery",
+        items=[
+            GalleryItem(
+                thumbnail=post.get("url"),
+                url=f"{base_url}{post['seo_url']}",
+            )
             for post in meta
         ],
-    }
+    )
 
 
-def _normalize_c0d3c7b1_e3df3be0(data, base_url, url, sub_hash) -> ImageResponse | dict:
+def _normalize_c0d3c7b1_e3df3be0(
+    data, base_url, url, sub_hash
+) -> ImageResponse | EmptyResponse:
     meta = data.get("metadata", [])
     if not meta:
-        return {}
+        return EmptyResponse()
     post = meta[0]
     api_url = request.host_url.rstrip("/")
-    return {
-        "renderer": "image",
-        "url": f"{api_url}/api/v1/proxy?url={post['url']}",
-        "authorName": post["pinner"]["username"],
-        "authorThumbnail": post["pinner"]["image_small_url"],
-        "authorUrl": f"{base_url}/{post['pinner']['username']}",
-        "description": post.get("description"),
-        "date": post.get("created_at"),
-        "groupName": post["board"]["name"],
-        "groupThumbnail": post["board"]["image_cover_url"],
-        "groupUrl": f"{base_url}{post['board']['url']}",
+    return ImageResponse(
+        renderer="image",
+        url=f"{api_url}/api/v1/proxy?url={post['url']}",
+        authorName=post["pinner"]["username"],
+        authorThumbnail=post["pinner"]["image_small_url"],
+        authorUrl=f"{base_url}/{post['pinner']['username']}",
+        description=post.get("description"),
+        date=post.get("created_at"),
+        groupName=post["board"]["name"],
+        groupThumbnail=post["board"]["image_cover_url"],
+        groupUrl=f"{base_url}{post['board']['url']}",
         **(
             {"width": post.get("width"), "height": post.get("height")}
             if post.get("width") and post.get("height")
             else {}
         ),
-    }
+    )
 
 
 def _normalize_ce200ea0_404ea5a3(data, base_url, url, sub_hash) -> GalleryResponse:
     meta = data.get("metadata", [])
     items = [
-        {
-            "thumbnail": urljoin(
+        GalleryItem(
+            thumbnail=urljoin(
                 f"{(p := urlparse(post['url'])).scheme}://{p.netloc}/",
                 post["thumbnail_path"],
             ),
-            "url": f"{base_url}/{post['creator']}/{post['id']}",
-            "authorName": post.get("creator"),
-            "authorThumbnail": (post.get("profile") or {}).get("profile_pic"),
-            "authorUrl": f"{base_url}/{post.get('creator')}",
-        }
+            url=f"{base_url}/{post['creator']}/{post['id']}",
+            authorName=post.get("creator"),
+            authorThumbnail=(post.get("profile") or {}).get("profile_pic"),
+            authorUrl=f"{base_url}/{post.get('creator')}",
+        )
         for post in meta
     ]
-    return {
-        "renderer": "gallery",
-        "nsfw": True,
+    return GalleryResponse(
+        renderer="gallery",
+        nsfw=True,
         **({"searchable": False} if sub_hash in ("36c7e141", "1601e678") else {}),
-        "items": items,
-    }
+        items=items,
+    )
 
 
-def _normalize_ce200ea0_5262c92a(data, base_url, url, sub_hash) -> ImageResponse | dict:
+def _normalize_ce200ea0_5262c92a(
+    data, base_url, url, sub_hash
+) -> ImageResponse | EmptyResponse:
     meta = data.get("metadata", [])
     if not meta:
-        return {"nsfw": True}
+        return EmptyResponse(nsfw=True)
     m = meta[0]
     posts = data.get("post", [])
     p = posts[0] if posts else {}
-    return {
-        "renderer": "image",
-        "nsfw": True,
-        "url": p.get("url"),
-        "videoUrl": p.get("url"),
-        "type": "video" if m.get("extension") in ("mp4", "mov") else "image",
-        "filename": p.get("filename"),
-        "description": m.get("description"),
-        "authorName": p.get("creator"),
-        "authorUrl": f"{base_url}/{p.get('creator')}",
+    return ImageResponse(
+        renderer="image",
+        nsfw=True,
+        url=p.get("url"),
+        videoUrl=p.get("url"),
+        type="video" if m.get("extension") in ("mp4", "mov") else "image",
+        filename=p.get("filename"),
+        description=m.get("description"),
+        authorName=p.get("creator"),
+        authorUrl=f"{base_url}/{p.get('creator')}",
         **(
             {"width": m.get("width"), "height": m.get("height")}
             if m.get("width") and m.get("height")
             else {}
         ),
-    }
+    )
 
 
 def _normalize_b8d92073_f374b090(data, base_url, url, sub_hash) -> UserProfileResponse:
     urls = data.get("urls", [])
-    return {
-        "renderer": "user-profile",
-        "avatarUrl": next((u for u in urls if "avatar" in u), None),
-        "galleryUrl": next((u for u in urls if "posts" in u), None),
-        "galleryRenderer": "gallery",
-    }
+    return UserProfileResponse(
+        renderer="user-profile",
+        avatarUrl=next((u for u in urls if "avatar" in u), None),
+        galleryUrl=next((u for u in urls if "posts" in u), None),
+        galleryRenderer="gallery",
+    )
 
 
 def _normalize_b8d92073_af675fda(data, base_url, url, sub_hash) -> UserInfoResponse:
     posts = data.get("post", [])
     urls = data.get("urls", [])
     p = posts[0] if posts else {}
-    return {
-        "renderer": "user-info",
-        "name": p.get("nickname"),
-        "thumbnail": urls[0] if urls else None,
-        "bio": p.get("signature"),
-        "verified": p.get("verified"),
-    }
+    return UserInfoResponse(
+        renderer="user-info",
+        name=p.get("nickname"),
+        thumbnail=urls[0] if urls else None,
+        bio=p.get("signature"),
+        verified=p.get("verified"),
+    )
 
 
 def _normalize_b8d92073_70206412(data, base_url, url, sub_hash) -> GalleryResponse:
     meta = data.get("metadata", [])
     posts = data.get("post", [])
-    return {
-        "renderer": "gallery",
-        "items": [
-            {
-                "thumbnail": (post.get("video") or {}).get("cover"),
-                "url": f"{base_url}/@{post['user']}/{'video' if i < len(meta) and meta[i].get('type') == 'video' else 'photo'}/{post['id']}",
-            }
+    return GalleryResponse(
+        renderer="gallery",
+        items=[
+            GalleryItem(
+                thumbnail=(post.get("video") or {}).get("cover"),
+                url=f"{base_url}/@{post['user']}/{'video' if i < len(meta) and meta[i].get('type') == 'video' else 'photo'}/{post['id']}",
+            )
             for i, post in enumerate(posts)
         ],
-    }
+    )
 
 
 def _normalize_03bfedaf_e7d2ac0d(data, base_url, url, sub_hash) -> MediaBoardResponse:
     meta = data.get("metadata", [])
     urls = data.get("urls", [])
-    return {
-        "renderer": "media-board",
-        "items": [
-            {
-                "url": urls[i],
-                "name": m.get("sub") or f"#{m['no']}",
-                "description": (
+    return MediaBoardResponse(
+        renderer="media-board",
+        items=[
+            BoardItem(
+                url=urls[i],
+                name=m.get("sub") or f"#{m['no']}",
+                description=(
                     _html.unescape(re.sub(r"<[^>]+>", " ", m["com"])).strip()
                     if m.get("com")
                     else None
                 ),
-                "count": m.get("replies"),
-                "date": datetime.utcfromtimestamp(m["last_modified"]).isoformat() + "Z",
-                "thumbnail": (
+                count=m.get("replies"),
+                date=datetime.utcfromtimestamp(m["last_modified"]).isoformat() + "Z",
+                thumbnail=(
                     f"https://i.4cdn.org/{m['board']}/{m['tim']}s.jpg"
                     if m.get("tim")
                     else None
                 ),
-            }
+            )
             for i, m in enumerate(meta)
             if i < len(urls)
         ],
-    }
+    )
 
 
 def _normalize_03bfedaf_25ba7f3f(data, base_url, url, sub_hash) -> ThreadResponse:
     meta = data.get("metadata", [])
     urls = data.get("urls", [])
-    return {
-        "renderer": "thread",
-        "items": [
-            {
-                "no": m.get("no"),
-                "com": m.get("com"),
-                "name": m.get("name"),
-                "date": (
+    return ThreadResponse(
+        renderer="thread",
+        items=[
+            ThreadPost(
+                no=m.get("no"),
+                com=m.get("com"),
+                name=m.get("name"),
+                date=(
                     datetime.utcfromtimestamp(m["time"]).isoformat() + "Z"
                     if m.get("time")
                     else None
                 ),
-                "thumbnail": (
+                thumbnail=(
                     f"https://i.4cdn.org/{m['board']}/{m['tim']}s.jpg"
                     if m.get("tim")
                     else None
                 ),
-                "url": urls[i] if i < len(urls) and urls[i] else None,
-                "filename": (
+                url=urls[i] if i < len(urls) and urls[i] else None,
+                filename=(
                     f"{m['filename']}{m['ext']}"
                     if m.get("filename") and m.get("ext")
                     else None
                 ),
-                "resto": m.get("resto"),
-            }
+                resto=m.get("resto"),
+            )
             for i, m in enumerate(meta)
         ],
-    }
+    )
 
 
 def _normalize_bd300ce5_2493dc95(data, base_url, url, sub_hash) -> MediaBoardResponse:
     meta = data.get("metadata", [])
     urls = data.get("urls", [])
-    return {
-        "renderer": "media-board",
-        "columns": 1,
+    return MediaBoardResponse(
+        renderer="media-board",
+        columns=1,
         **({"searchable": False} if sub_hash == "2c906dae" else {}),
-        "items": [
-            {
-                "url": urls[i] if i < len(urls) else None,
-                "name": m.get("title"),
-                "thumbnail": next(
+        items=[
+            BoardItem(
+                url=urls[i] if i < len(urls) else None,
+                name=m.get("title"),
+                thumbnail=next(
                     (
                         v
                         for v in [
@@ -669,22 +690,22 @@ def _normalize_bd300ce5_2493dc95(data, base_url, url, sub_hash) -> MediaBoardRes
                     ),
                     None,
                 ),
-                "description": (m.get("selftext")[:200] if m.get("selftext") else None),
-                "count": m.get("num_comments"),
-                "score": m.get("score"),
-                "date": (
+                description=(m.get("selftext")[:200] if m.get("selftext") else None),
+                count=m.get("num_comments"),
+                score=m.get("score"),
+                date=(
                     datetime.utcfromtimestamp(m["created_utc"]).isoformat() + "Z"
                     if m.get("created_utc")
                     else None
                 ),
-                "groupName": (f"r/{m['subreddit']}" if m.get("subreddit") else None),
-                "groupUrl": (
+                groupName=(f"r/{m['subreddit']}" if m.get("subreddit") else None),
+                groupUrl=(
                     f"{base_url}/r/{m['subreddit']}" if m.get("subreddit") else None
                 ),
-            }
+            )
             for i, m in enumerate(meta)
         ],
-    }
+    )
 
 
 def _normalize_bd300ce5_578a8689(data, base_url, url, sub_hash) -> ThreadResponse:
@@ -699,7 +720,7 @@ def _normalize_bd300ce5_578a8689(data, base_url, url, sub_hash) -> ThreadRespons
         else None
     )
     focused_comment_id = fc_match.group(1) if fc_match else ""
-    items = []
+    items: list[ThreadPost] = []
     listing_cursor = None
     listing_cursor_type = None
     for i, m in enumerate(meta):
@@ -763,26 +784,26 @@ def _normalize_bd300ce5_578a8689(data, base_url, url, sub_hash) -> ThreadRespons
             author = m.get("author")
             subreddit = m.get("subreddit")
             items.append(
-                {
-                    "title": title or None,
-                    "com": com,
-                    "name": author,
-                    "authorUrl": (f"{base_url}/user/{author}" if author else None),
-                    "date": (
+                ThreadPost(
+                    title=title or None,
+                    com=com,
+                    name=author,
+                    authorUrl=(f"{base_url}/user/{author}" if author else None),
+                    date=(
                         datetime.utcfromtimestamp(m["created_utc"]).isoformat() + "Z"
                         if m.get("created_utc")
                         else None
                     ),
-                    "thumbnail": thumbnail,
-                    "url": media_url,
-                    "mediaType": media_type,
-                    "sourceUrl": source_url,
-                    "postUrl": url,
-                    "score": m.get("score"),
-                    "count": m.get("num_comments"),
-                    "groupName": f"r/{subreddit}" if subreddit else None,
-                    "groupUrl": (f"{base_url}/r/{subreddit}" if subreddit else None),
-                }
+                    thumbnail=thumbnail,
+                    url=media_url,
+                    mediaType=media_type,
+                    sourceUrl=source_url,
+                    postUrl=url,
+                    score=m.get("score"),
+                    count=m.get("num_comments"),
+                    groupName=f"r/{subreddit}" if subreddit else None,
+                    groupUrl=(f"{base_url}/r/{subreddit}" if subreddit else None),
+                )
             )
         else:
             parent_id = m.get("parent_id", "")
@@ -809,20 +830,20 @@ def _normalize_bd300ce5_578a8689(data, base_url, url, sub_hash) -> ThreadRespons
             )
             has_replies = bool(m.get("replies"))
             items.append(
-                {
-                    "com": body_html,
-                    "name": author,
-                    "authorUrl": (f"{base_url}/user/{author}" if author else None),
-                    "date": (
+                ThreadPost(
+                    com=body_html,
+                    name=author,
+                    authorUrl=(f"{base_url}/user/{author}" if author else None),
+                    date=(
                         datetime.utcfromtimestamp(m["created_utc"]).isoformat() + "Z"
                         if m.get("created_utc")
                         else None
                     ),
-                    "score": m.get("score"),
-                    "repliesUrl": (
+                    score=m.get("score"),
+                    repliesUrl=(
                         f"{base_url}{permalink}" if permalink and has_replies else None
                     ),
-                }
+                )
             )
     next_url = None
     if is_comment_url and listing_cursor:
@@ -831,19 +852,21 @@ def _normalize_bd300ce5_578a8689(data, base_url, url, sub_hash) -> ThreadRespons
             next_url = f"{base_comment_url}?after={listing_cursor}"
         else:
             next_url = f"{base_comment_url}?children={listing_cursor}"
-    return {
-        "renderer": "thread",
-        "items": items,
+    return ThreadResponse(
+        renderer="thread",
+        items=items,
         **({"nextUrl": next_url} if next_url else {}),
-    }
+    )
 
 
-def _normalize_b8d92073_33295e95(data, base_url, url, sub_hash) -> ImageResponse | dict:
+def _normalize_b8d92073_33295e95(
+    data, base_url, url, sub_hash
+) -> ImageResponse | EmptyResponse:
     meta = data.get("metadata", [])
     posts = data.get("post", [])
     urls = data.get("urls", [])
     if not posts or not meta:
-        return {}
+        return EmptyResponse()
     p = posts[0]
     m = meta[0]
     cookies = data.get("cookies", {})
@@ -870,39 +893,41 @@ def _normalize_b8d92073_33295e95(data, base_url, url, sub_hash) -> ImageResponse
         }.items()
         if v is not None
     }
-    return {
-        "renderer": "image",
-        "url": video.get("cover"),
-        "posterUrl": video.get("cover"),
-        "videoUrl": video_url,
-        "type": m.get("type"),
-        "filename": m.get("filename"),
-        "date": m.get("date"),
-        "description": p.get("desc"),
-        "authorName": p.get("user"),
-        "authorUrl": f"{base_url}/@{p.get('user')}",
-        "authorThumbnail": (p.get("author") or {}).get("avatarThumb"),
-        **({"stats": stats} if stats else {}),
+    return ImageResponse(
+        renderer="image",
+        url=video.get("cover"),
+        posterUrl=video.get("cover"),
+        videoUrl=video_url,
+        type=m.get("type"),
+        filename=m.get("filename"),
+        date=m.get("date"),
+        description=p.get("desc"),
+        authorName=p.get("user"),
+        authorUrl=f"{base_url}/@{p.get('user')}",
+        authorThumbnail=(p.get("author") or {}).get("avatarThumb"),
+        **({"stats": ImageStats(**stats)} if stats else {}),
         **({"width": width, "height": height} if width and height else {}),
-    }
+    )
 
 
-def _normalize_6987b443_246a90b8(data, base_url, url, sub_hash) -> ImageResponse | dict:
+def _normalize_6987b443_246a90b8(
+    data, base_url, url, sub_hash
+) -> ImageResponse | EmptyResponse:
     meta = data.get("metadata", [])
     if not meta:
-        return {}
+        return EmptyResponse()
     m = meta[0]
     is_video = bool(m.get("has_sound") or m.get("is_animated"))
-    return {
-        "renderer": "image",
-        "url": m.get("url"),
-        "type": "video" if is_video else "image",
-        "filename": m.get("name") or m.get("filename"),
-        "date": m.get("date"),
-        "description": m.get("description"),
+    return ImageResponse(
+        renderer="image",
+        url=m.get("url"),
+        type="video" if is_video else "image",
+        filename=m.get("name") or m.get("filename"),
+        date=m.get("date"),
+        description=m.get("description"),
         **({"videoUrl": m.get("url")} if is_video else {}),
         **(
-            {"stats": {"likes": m["point_count"]}}
+            {"stats": ImageStats(likes=m["point_count"])}
             if m.get("point_count") is not None
             else {}
         ),
@@ -911,36 +936,36 @@ def _normalize_6987b443_246a90b8(data, base_url, url, sub_hash) -> ImageResponse
             if m.get("width") and m.get("height")
             else {}
         ),
-    }
+    )
 
 
 def _normalize_6987b443_220a21da(data, base_url, url, sub_hash) -> GalleryResponse:
     meta = data.get("metadata", [])
-    return {
-        "renderer": "gallery",
-        "items": [
-            {
-                "thumbnail": img.get("url"),
-                "url": f"{base_url}/{img['id']}",
-                "name": img.get("title"),
-                "date": img.get("date"),
+    return GalleryResponse(
+        renderer="gallery",
+        items=[
+            GalleryItem(
+                thumbnail=img.get("url"),
+                url=f"{base_url}/{img['id']}",
+                name=img.get("title"),
+                date=img.get("date"),
                 **(
                     {"score": img["album"]["score"]}
                     if (img.get("album") or {}).get("score") is not None
                     else {}
                 ),
-            }
+            )
             for img in meta
         ],
-    }
+    )
 
 
 def _normalize_6987b443_f5b01daf(
     data, base_url, url, sub_hash
-) -> GalleryResponse | ImageResponse | dict:
+) -> GalleryResponse | ImageResponse | EmptyResponse:
     urls = data.get("urls", [])
     if not urls:
-        return {}
+        return EmptyResponse()
     target_url = urls[0]
     target_data = download_post(target_url)
     if "/a/" in target_url:
@@ -951,20 +976,20 @@ def _normalize_6987b443_f5b01daf(
 def _normalize_6987b443_45c4d380(data, base_url, url, sub_hash) -> MediaBoardResponse:
     meta = data.get("metadata", [])
     urls = data.get("urls", [])
-    return {
-        "renderer": "media-board",
-        "items": [
-            {
-                "url": urls[i] if i < len(urls) else None,
-                "name": post.get("title"),
-                "thumbnail": (
+    return MediaBoardResponse(
+        renderer="media-board",
+        items=[
+            BoardItem(
+                url=urls[i] if i < len(urls) else None,
+                name=post.get("title"),
+                thumbnail=(
                     f"https://i.imgur.com/{post['cover']}m.jpg"
                     if post.get("is_album") and post.get("cover")
                     else f"https://i.imgur.com/{post['id']}m.jpg"
                 ),
-                "count": post.get("images_count"),
-                "score": post.get("score"),
-                "description": post.get("description"),
+                count=post.get("images_count"),
+                score=post.get("score"),
+                description=post.get("description"),
                 **(
                     {
                         "date": datetime.utcfromtimestamp(post["datetime"]).isoformat()
@@ -973,27 +998,27 @@ def _normalize_6987b443_45c4d380(data, base_url, url, sub_hash) -> MediaBoardRes
                     if post.get("datetime")
                     else {}
                 ),
-            }
+            )
             for i, post in enumerate(meta)
         ],
-    }
+    )
 
 
 def _normalize_6987b443_831a43a1(data, base_url, url, sub_hash) -> GalleryResponse:
     meta = data.get("metadata", [])
     urls = data.get("urls", [])
-    return {
-        "renderer": "gallery",
-        "items": [
-            {
-                "url": urls[i] if i < len(urls) else None,
-                "thumbnail": (
+    return GalleryResponse(
+        renderer="gallery",
+        items=[
+            GalleryItem(
+                url=urls[i] if i < len(urls) else None,
+                thumbnail=(
                     f"https://i.imgur.com/{post['cover']}m.jpg"
                     if post.get("is_album") and post.get("cover")
                     else f"https://i.imgur.com/{post['id']}m.jpg"
                 ),
-                "name": post.get("title"),
-                "score": post.get("score"),
+                name=post.get("title"),
+                score=post.get("score"),
                 **(
                     {
                         "authorName": post["account_url"],
@@ -1019,40 +1044,40 @@ def _normalize_6987b443_831a43a1(data, base_url, url, sub_hash) -> GalleryRespon
                     if post.get("datetime")
                     else {}
                 ),
-            }
+            )
             for i, post in enumerate(meta)
         ],
-    }
+    )
 
 
 def _normalize_4ef4b826_58c6828b(
     data, base_url, url, sub_hash
-) -> ImageResponse | GalleryResponse | dict:
+) -> ImageResponse | GalleryResponse | EmptyResponse:
     meta = data.get("metadata", [])
     urls = data.get("urls", [])
     if not meta:
-        return {}
+        return EmptyResponse()
     m = meta[0]
     a = m.get("asset") or {}
     user = m.get("user") or {}
     is_video = bool(a.get("has_embedded_player"))
     asset_url = urls[0] if urls else a.get("image_url")
-    return {
-        "renderer": "image",
-        "url": asset_url,
-        "type": "video" if is_video else "image",
+    return ImageResponse(
+        renderer="image",
+        url=asset_url,
+        type="video" if is_video else "image",
         **({"videoUrl": asset_url} if is_video else {}),
-        "description": m.get("description"),
-        "authorName": user.get("username"),
+        description=m.get("description"),
+        authorName=user.get("username"),
         **({"authorUrl": user["permalink"]} if user.get("permalink") else {}),
         **(
             {"authorThumbnail": user["large_avatar_url"]}
             if user.get("large_avatar_url")
             else {}
         ),
-        "date": m.get("date"),
+        date=m.get("date"),
         **(
-            {"stats": {"likes": m["likes_count"]}}
+            {"stats": ImageStats(likes=m["likes_count"])}
             if m.get("likes_count") is not None
             else {}
         ),
@@ -1061,78 +1086,80 @@ def _normalize_4ef4b826_58c6828b(
             if a.get("width") and a.get("height")
             else {}
         ),
-    }
+    )
 
 
 def _normalize_4ef4b826_c0515ad9(data, base_url, url, sub_hash) -> GalleryResponse:
     meta = data.get("metadata", [])
     urls = data.get("urls", [])
-    return {
-        "renderer": "gallery",
-        "items": [
-            {
-                "thumbnail": (
+    return GalleryResponse(
+        renderer="gallery",
+        items=[
+            GalleryItem(
+                thumbnail=(
                     urls[i]
                     if i < len(urls)
                     else (m.get("asset") or {}).get("image_url")
                 ),
-                "url": m.get("permalink"),
-                "name": m.get("title"),
-                "score": m.get("likes_count"),
-                "date": m.get("date"),
-                "authorName": (m.get("user") or {}).get("username"),
-                "authorUrl": (m.get("user") or {}).get("permalink"),
-                "authorThumbnail": (m.get("user") or {}).get("medium_avatar_url"),
-            }
+                url=m.get("permalink"),
+                name=m.get("title"),
+                score=m.get("likes_count"),
+                date=m.get("date"),
+                authorName=(m.get("user") or {}).get("username"),
+                authorUrl=(m.get("user") or {}).get("permalink"),
+                authorThumbnail=(m.get("user") or {}).get("medium_avatar_url"),
+            )
             for i, m in enumerate(meta)
             if m.get("num") == 1
         ],
-    }
+    )
 
 
 def _normalize_fb2fff6e_5b3349ae(data, base_url, url, sub_hash) -> UserInfoResponse:
     posts = data.get("post", [])
     p = posts[0] if posts else {}
-    return {
-        "renderer": "user-info",
-        "name": p.get("handle"),
-        "thumbnail": p.get("avatar"),
-        "nickname": p.get("displayName"),
-        "bio": p.get("description"),
-        "stats": {
-            "followers": p.get("followersCount"),
-            "following": p.get("followsCount"),
-            "mediaCount": p.get("postsCount"),
-        },
-    }
+    return UserInfoResponse(
+        renderer="user-info",
+        name=p.get("handle"),
+        thumbnail=p.get("avatar"),
+        nickname=p.get("displayName"),
+        bio=p.get("description"),
+        stats=UserInfoStats(
+            followers=p.get("followersCount"),
+            following=p.get("followsCount"),
+            mediaCount=p.get("postsCount"),
+        ),
+    )
 
 
 def _normalize_fb2fff6e_897ae881(data, base_url, url, sub_hash) -> UserProfileResponse:
     urls = data.get("urls", [])
-    return {
-        "renderer": "user-profile",
-        "avatarUrl": next((u for u in urls if "/info" in u), None),
-        "galleryUrl": next((u for u in urls if "/posts" in u), None),
-        "galleryRenderer": "media-board",
-    }
+    return UserProfileResponse(
+        renderer="user-profile",
+        avatarUrl=next((u for u in urls if "/info" in u), None),
+        galleryUrl=next((u for u in urls if "/posts" in u), None),
+        galleryRenderer="media-board",
+    )
 
 
-def _normalize_fb2fff6e_13456f80(data, base_url, url, sub_hash) -> ImageResponse | dict:
+def _normalize_fb2fff6e_13456f80(
+    data, base_url, url, sub_hash
+) -> ImageResponse | EmptyResponse:
     meta = data.get("metadata", [])
     urls = data.get("urls", [])
     if not meta:
-        return {}
+        return EmptyResponse()
     m = meta[0]
     author = m.get("author") or {}
     is_video = (m.get("extension") or "").lower() in ("mp4", "mov", "webm", "m4v")
     asset_url = urls[0] if urls else None
-    return {
-        "renderer": "image",
-        "url": asset_url,
-        "type": "video" if is_video else "image",
+    return ImageResponse(
+        renderer="image",
+        url=asset_url,
+        type="video" if is_video else "image",
         **({"videoUrl": asset_url} if is_video else {}),
-        "description": m.get("text") or m.get("description"),
-        "authorName": author.get("displayName") or author.get("handle"),
+        description=m.get("text") or m.get("description"),
+        authorName=author.get("displayName") or author.get("handle"),
         **(
             {"authorUrl": f"{base_url}/profile/{author['handle']}"}
             if author.get("handle")
@@ -1141,7 +1168,7 @@ def _normalize_fb2fff6e_13456f80(data, base_url, url, sub_hash) -> ImageResponse
         **({"authorThumbnail": author["avatar"]} if author.get("avatar") else {}),
         **({"date": m["date"]} if m.get("date") else {}),
         **(
-            {"stats": {"likes": m["likeCount"]}}
+            {"stats": ImageStats(likes=m["likeCount"])}
             if m.get("likeCount") is not None
             else {}
         ),
@@ -1150,7 +1177,7 @@ def _normalize_fb2fff6e_13456f80(data, base_url, url, sub_hash) -> ImageResponse
             if m.get("width") and m.get("height")
             else {}
         ),
-    }
+    )
 
 
 def _normalize_fb2fff6e_494f3b89(data, base_url, url, sub_hash) -> MediaBoardResponse:
@@ -1163,74 +1190,80 @@ def _normalize_fb2fff6e_494f3b89(data, base_url, url, sub_hash) -> MediaBoardRes
         if m.get("num") == 1 and post_id and post_id not in thumbnails:
             thumbnails[post_id] = urls[i] if i < len(urls) else None
 
-    return {
-        "renderer": "media-board",
-        "columns": 1,
-        "items": [
-            {
-                "thumbnail": thumbnails.get(p.get("post_id")),
-                "url": (
+    return MediaBoardResponse(
+        renderer="media-board",
+        columns=1,
+        items=[
+            BoardItem(
+                thumbnail=thumbnails.get(p.get("post_id")),
+                url=(
                     f"{base_url}/profile/{p['author']['handle']}"
                     f"/post/{p['post_id']}"
                     if (p.get("author") or {}).get("handle") and p.get("post_id")
                     else None
                 ),
-                "name": p.get("text"),
-                "score": p.get("likeCount"),
-                "count": p.get("replyCount"),
+                name=p.get("text"),
+                score=p.get("likeCount"),
+                count=p.get("replyCount"),
                 **({"date": p["date"]} if p.get("date") else {}),
-                "groupName": (p.get("author") or {}).get("displayName")
+                groupName=(p.get("author") or {}).get("displayName")
                 or (p.get("author") or {}).get("handle"),
-                "groupUrl": (
+                groupUrl=(
                     f"{base_url}/profile/{p['author']['handle']}"
                     if (p.get("author") or {}).get("handle")
                     else None
                 ),
-                "groupThumbnail": (p.get("author") or {}).get("avatar"),
-            }
+                groupThumbnail=(p.get("author") or {}).get("avatar"),
+            )
             for p in posts
         ],
-    }
+    )
 
 
-def _normalize_d0a6cf69_82a45cae(data, base_url, url, sub_hash) -> ImageResponse | dict:
+def _normalize_d0a6cf69_82a45cae(
+    data, base_url, url, sub_hash
+) -> ImageResponse | EmptyResponse:
     meta = data.get("metadata", [])
     urls = data.get("urls", [])
     if not meta:
-        return {}
+        return EmptyResponse()
     m = meta[0]
     user = m.get("user") or {}
     asset_url = urls[0] if urls else None
     is_video = (m.get("format") or "").lower() in ("mp4", "webm")
-    return {
-        "renderer": "image",
-        "url": asset_url,
-        "type": "video" if is_video else "image",
+    return ImageResponse(
+        renderer="image",
+        url=asset_url,
+        type="video" if is_video else "image",
         **({"videoUrl": asset_url} if is_video else {}),
-        "description": m.get("description") or m.get("title"),
+        description=m.get("description") or m.get("title"),
         **({"authorName": user["username"]} if user.get("username") else {}),
         **({"authorUrl": user["url"]} if user.get("url") else {}),
-        "date": m.get("date"),
-        **({"stats": {"likes": m["shares"]}} if m.get("shares") is not None else {}),
+        date=m.get("date"),
+        **(
+            {"stats": ImageStats(likes=m["shares"])}
+            if m.get("shares") is not None
+            else {}
+        ),
         **(
             {"width": m.get("width"), "height": m.get("height")}
             if m.get("width") and m.get("height")
             else {}
         ),
-    }
+    )
 
 
 def _normalize_d0a6cf69_eee270f5(data, base_url, url, sub_hash) -> GalleryResponse:
     meta = data.get("metadata", [])
     urls = data.get("urls", [])
-    return {
-        "renderer": "gallery",
-        "items": [
-            {
-                "thumbnail": urls[i] if i < len(urls) else None,
-                "url": m.get("itemurl"),
-                "name": m.get("title"),
-                "score": m.get("shares"),
+    return GalleryResponse(
+        renderer="gallery",
+        items=[
+            GalleryItem(
+                thumbnail=urls[i] if i < len(urls) else None,
+                url=m.get("itemurl"),
+                name=m.get("title"),
+                score=m.get("shares"),
                 **({"date": m["date"]} if m.get("date") else {}),
                 **(
                     {"authorName": (m.get("user") or {})["username"]}
@@ -1242,52 +1275,54 @@ def _normalize_d0a6cf69_eee270f5(data, base_url, url, sub_hash) -> GalleryRespon
                     if (m.get("user") or {}).get("url")
                     else {}
                 ),
-            }
+            )
             for i, m in enumerate(meta)
         ],
-    }
+    )
 
 
-def _normalize_39327924_7cc48931(data, base_url, url, sub_hash) -> ImageResponse | dict:
+def _normalize_39327924_7cc48931(
+    data, base_url, url, sub_hash
+) -> ImageResponse | EmptyResponse:
     meta = data.get("metadata", [])
     urls = data.get("urls", [])
     if not meta:
-        return {}
+        return EmptyResponse()
     m = meta[0]
     asset_url = urls[0] if urls else m.get("url")
-    return {
-        "renderer": "image",
-        "url": asset_url,
-        "type": "image",
-        "description": m.get("title"),
+    return ImageResponse(
+        renderer="image",
+        url=asset_url,
+        type="image",
+        description=m.get("title"),
         **({"authorName": m["author"]} if m.get("author") else {}),
         **({"authorUrl": m["author_url"]} if m.get("author_url") else {}),
-        "date": m.get("date"),
+        date=m.get("date"),
         **(
             {"width": m.get("width"), "height": m.get("height")}
             if m.get("width") and m.get("height")
             else {}
         ),
-    }
+    )
 
 
 def _normalize_39327924_d4712f67(data, base_url, url, sub_hash) -> GalleryResponse:
     meta = data.get("metadata", [])
     urls = data.get("urls", [])
-    return {
-        "renderer": "gallery",
-        "items": [
-            {
-                "thumbnail": urls[i] if i < len(urls) else m.get("url"),
-                "url": f"{base_url}/viewimage/{m['id']}" if m.get("id") else None,
-                "name": m.get("title"),
+    return GalleryResponse(
+        renderer="gallery",
+        items=[
+            GalleryItem(
+                thumbnail=urls[i] if i < len(urls) else m.get("url"),
+                url=f"{base_url}/viewimage/{m['id']}" if m.get("id") else None,
+                name=m.get("title"),
                 **({"date": m["date"]} if m.get("date") else {}),
                 **({"authorName": m["author"]} if m.get("author") else {}),
                 **({"authorUrl": m["author_url"]} if m.get("author_url") else {}),
-            }
+            )
             for i, m in enumerate(meta)
         ],
-    }
+    )
 
 
 def _normalize_cfe6ea0d_580366f7(data, base_url, url, sub_hash) -> GalleryResponse:
@@ -1295,26 +1330,28 @@ def _normalize_cfe6ea0d_580366f7(data, base_url, url, sub_hash) -> GalleryRespon
     urls = data.get("urls", [])
     prefix_match = re.match(r"(https?://[^/]+/(?:title|name)/(?:tt|nm)\d+)", url)
     prefix = prefix_match.group(1) if prefix_match else base_url
-    return {
-        "renderer": "gallery",
-        "items": [
-            {
-                "thumbnail": urls[i] if i < len(urls) else m.get("url"),
-                "url": f"{prefix}/mediaviewer/{m['id']}/" if m.get("id") else None,
-                "name": (m.get("caption") or {}).get("plainText")
+    return GalleryResponse(
+        renderer="gallery",
+        items=[
+            GalleryItem(
+                thumbnail=urls[i] if i < len(urls) else m.get("url"),
+                url=f"{prefix}/mediaviewer/{m['id']}/" if m.get("id") else None,
+                name=(m.get("caption") or {}).get("plainText")
                 or m.get("title")
                 or m.get("name"),
-            }
+            )
             for i, m in enumerate(meta)
         ],
-    }
+    )
 
 
-def _normalize_f5884405_11768bac(data, base_url, url, sub_hash) -> ImageResponse | dict:
+def _normalize_f5884405_11768bac(
+    data, base_url, url, sub_hash
+) -> ImageResponse | EmptyResponse:
     meta = data.get("metadata", [])
     urls = data.get("urls", [])
     if not meta:
-        return {"nsfw": True}
+        return EmptyResponse(nsfw=True)
     m = meta[0]
     is_video = (m.get("extension") or "").lower() in ("mp4", "webm", "mov")
     asset_url = None
@@ -1325,46 +1362,44 @@ def _normalize_f5884405_11768bac(data, base_url, url, sub_hash) -> ImageResponse
             f"{api_url}/api/v1/proxy?headers={quote(json.dumps(headers))}"
             f"&url={quote(urls[0])}"
         )
-    return {
-        "renderer": "image",
-        "nsfw": True,
-        "url": asset_url,
-        "type": "video" if is_video else "image",
+    return ImageResponse(
+        renderer="image",
+        nsfw=True,
+        url=asset_url,
+        type="video" if is_video else "image",
         **({"videoUrl": asset_url} if is_video else {}),
-        "description": m.get("title"),
+        description=m.get("title"),
         **({"authorName": m["user"]} if m.get("user") else {}),
         **({"authorUrl": f"{base_url}/{m['user']}"} if m.get("user") else {}),
-        "date": m.get("date"),
-    }
+        date=m.get("date"),
+    )
 
 
 def _normalize_f5884405_508c0a32(data, base_url, url, sub_hash) -> GalleryResponse:
     meta = data.get("metadata", [])
-    return {
-        "renderer": "gallery",
-        "nsfw": True,
-        "items": [
-            {
-                "thumbnail": m.get("thumbnail"),
-                "url": m.get("url"),
-                "name": m.get("title"),
+    return GalleryResponse(
+        renderer="gallery",
+        nsfw=True,
+        items=[
+            GalleryItem(
+                thumbnail=m.get("thumbnail"),
+                url=m.get("url"),
+                name=m.get("title"),
                 **({"authorName": m["user"]} if m.get("user") else {}),
-                **(
-                    {"authorUrl": f"{base_url}/{m['user']}"}
-                    if m.get("user")
-                    else {}
-                ),
-            }
+                **({"authorUrl": f"{base_url}/{m['user']}"} if m.get("user") else {}),
+            )
             for m in meta
         ],
-    }
+    )
 
 
-def _normalize_430e2afe_2244d6f3(data, base_url, url, sub_hash) -> ImageResponse | dict:
+def _normalize_430e2afe_2244d6f3(
+    data, base_url, url, sub_hash
+) -> ImageResponse | EmptyResponse:
     meta = data.get("metadata", [])
     urls = data.get("urls", [])
     if not meta:
-        return {}
+        return EmptyResponse()
     m = meta[0]
     user = m.get("user") or {}
     is_video = m.get("media") == "video"
@@ -1377,51 +1412,51 @@ def _normalize_430e2afe_2244d6f3(data, base_url, url, sub_hash) -> ImageResponse
         if icon_server and str(icon_server) != "0" and user.get("nsid")
         else None
     )
-    return {
-        "renderer": "image",
-        "url": asset_url,
-        "type": "video" if is_video else "image",
+    return ImageResponse(
+        renderer="image",
+        url=asset_url,
+        type="video" if is_video else "image",
         **({"videoUrl": asset_url} if is_video else {}),
-        "description": m.get("title") or m.get("description"),
+        description=m.get("title") or m.get("description"),
         **({"authorName": user["username"]} if user.get("username") else {}),
         **({"authorUrl": f"{base_url}/photos/{owner_id}/"} if owner_id else {}),
         **({"authorThumbnail": author_thumb} if author_thumb else {}),
-        "date": m.get("date"),
-        **({"stats": {"comments": m["comments"]}} if m.get("comments") is not None else {}),
+        date=m.get("date"),
+        **(
+            {"stats": ImageStats(comments=m["comments"])}
+            if m.get("comments") is not None
+            else {}
+        ),
         **(
             {"width": m.get("width"), "height": m.get("height")}
             if m.get("width") and m.get("height")
             else {}
         ),
-    }
+    )
 
 
 def _normalize_430e2afe_c4d84d31(data, base_url, url, sub_hash) -> GalleryResponse:
     meta = data.get("metadata", [])
     urls = data.get("urls", [])
-    items = []
+    items: list[GalleryItem] = []
     for i, m in enumerate(meta):
         user = m.get("user") or m.get("owner") or {}
         owner_id = user.get("path_alias") or user.get("nsid")
         items.append(
-            {
-                "thumbnail": urls[i] if i < len(urls) else m.get("url"),
-                "url": (
+            GalleryItem(
+                thumbnail=urls[i] if i < len(urls) else m.get("url"),
+                url=(
                     f"{base_url}/photos/{owner_id}/{m['id']}"
                     if owner_id and m.get("id")
                     else None
                 ),
-                "name": m.get("title"),
+                name=m.get("title"),
                 **({"date": m["date"]} if m.get("date") else {}),
                 **({"authorName": user["username"]} if user.get("username") else {}),
-                **(
-                    {"authorUrl": f"{base_url}/photos/{owner_id}/"}
-                    if owner_id
-                    else {}
-                ),
-            }
+                **({"authorUrl": f"{base_url}/photos/{owner_id}/"} if owner_id else {}),
+            )
         )
-    return {"renderer": "gallery", "items": items}
+    return GalleryResponse(renderer="gallery", items=items)
 
 
 def _normalize_430e2afe_ec4a8abd(data, base_url, url, sub_hash) -> GalleryResponse:
@@ -1429,7 +1464,7 @@ def _normalize_430e2afe_ec4a8abd(data, base_url, url, sub_hash) -> GalleryRespon
     is_album_listing = bool(meta) and meta[0].get("count_photos") is not None
     if not is_album_listing:
         return _normalize_430e2afe_c4d84d31(data, base_url, url, sub_hash)
-    items = []
+    items: list[GalleryItem] = []
     for m in meta:
         farm, server, primary, secret = (
             m.get("farm"),
@@ -1444,23 +1479,19 @@ def _normalize_430e2afe_ec4a8abd(data, base_url, url, sub_hash) -> GalleryRespon
         )
         owner_id = m.get("username") or m.get("owner")
         items.append(
-            {
-                "thumbnail": thumbnail,
-                "url": (
+            GalleryItem(
+                thumbnail=thumbnail,
+                url=(
                     f"{base_url}/photos/{owner_id}/albums/{m['id']}"
                     if owner_id and m.get("id")
                     else None
                 ),
-                "name": m.get("title"),
+                name=m.get("title"),
                 **({"authorName": m["username"]} if m.get("username") else {}),
-                **(
-                    {"authorUrl": f"{base_url}/photos/{owner_id}/"}
-                    if owner_id
-                    else {}
-                ),
-            }
+                **({"authorUrl": f"{base_url}/photos/{owner_id}/"} if owner_id else {}),
+            )
         )
-    return {"renderer": "gallery", "items": items}
+    return GalleryResponse(renderer="gallery", items=items)
 
 
 _NORMALIZERS = {
@@ -1552,7 +1583,7 @@ _NORMALIZERS = {
 
 def normalize(
     category, subcategory, data, base_url, url=""
-) -> NormalizedResponse | dict | None:
+) -> NormalizedResponse | EmptyResponse | None:
     sub_hash = _fnv1a(category + subcategory)
     fn = _NORMALIZERS.get((_fnv1a(category), sub_hash))
     return fn(data, base_url, url, sub_hash) if fn else None
