@@ -24,6 +24,8 @@ _bd300ce5_2493dc95 = _by_key.get(("bd300ce5", "2493dc95"))
 _bd300ce5_2c906dae = _by_key.get(("bd300ce5", "2c906dae"))
 _bd300ce5_ba419d12 = _by_key.get(("bd300ce5", "ba419d12"))
 _bd300ce5_578a8689 = _by_key.get(("bd300ce5", "578a8689"))
+_f5884405_508c0a32 = _by_key.get(("f5884405", "508c0a32"))
+_f5884405_9caaf4e9 = _by_key.get(("f5884405", "9caaf4e9"))
 
 _board_root = ""
 if _03bfedaf_e7d2ac0d:
@@ -145,16 +147,63 @@ def _patch_bd300ce5_578a8689(self):
                 yield Message.Url, "", comment
 
 
-for _cls, _fn in [
-    (_03bfedaf_25ba7f3f, _patch_03bfedaf_25ba7f3f),
-    (_03bfedaf_e7d2ac0d, _patch_03bfedaf_e7d2ac0d),
-    (_bd300ce5_2493dc95, _patch_bd300ce5),
-    (_bd300ce5_2c906dae, _patch_bd300ce5),
-    (_bd300ce5_ba419d12, _patch_bd300ce5),
-    (_bd300ce5_578a8689, _patch_bd300ce5_578a8689),
+def _patch_f5884405_pagination(self, url, params):
+    link_re = _re.compile(r'album-link" href="([^"]+)"')
+    img_re = _re.compile(r'<img[^>]*\bsrc="([^"]+)"')
+    title_re = _re.compile(r'album-title"\s+href="[^"]*"\s*>([^<]*)</a>')
+    user_re = _re.compile(r'album-user"\s*>([^<]*)</span>')
+
+    page_num = _gdl_text.parse_int(params.get("page"), 1)
+    while True:
+        params["page"] = page_num
+        page = self.request(url, params=params).text
+        cards = page.split(' album" id="album-')[1:]
+        for card in cards:
+            link_match = link_re.search(card)
+            if not link_match:
+                continue
+            img_match = img_re.search(card)
+            title_match = title_re.search(card)
+            user_match = user_re.search(card)
+            yield {
+                "url": link_match.group(1),
+                "thumbnail": img_match.group(1) if img_match else None,
+                "title": (
+                    _gdl_text.unescape(title_match.group(1).strip())
+                    if title_match
+                    else ""
+                ),
+                "user": (
+                    _gdl_text.unescape(user_match.group(1).strip())
+                    if user_match
+                    else ""
+                ),
+            }
+        if len(cards) < 36:
+            return
+        page_num += 1
+
+
+def _patch_f5884405_items(self):
+    for card in self.albums():
+        yield Message.Directory, "", card
+        yield Message.Url, card["url"], card
+
+
+for _cls, _attr, _fn in [
+    (_03bfedaf_25ba7f3f, "items", _patch_03bfedaf_25ba7f3f),
+    (_03bfedaf_e7d2ac0d, "items", _patch_03bfedaf_e7d2ac0d),
+    (_bd300ce5_2493dc95, "items", _patch_bd300ce5),
+    (_bd300ce5_2c906dae, "items", _patch_bd300ce5),
+    (_bd300ce5_ba419d12, "items", _patch_bd300ce5),
+    (_bd300ce5_578a8689, "items", _patch_bd300ce5_578a8689),
+    (_f5884405_508c0a32, "_pagination", _patch_f5884405_pagination),
+    (_f5884405_508c0a32, "items", _patch_f5884405_items),
+    (_f5884405_9caaf4e9, "_pagination", _patch_f5884405_pagination),
+    (_f5884405_9caaf4e9, "items", _patch_f5884405_items),
 ]:
     if _cls:
-        _cls.items = _fn
+        setattr(_cls, _attr, _fn)
 
 
 _REDDIT_CLIENT_IDS = [

@@ -1310,6 +1310,56 @@ def _normalize_cfe6ea0d_580366f7(data, base_url, url, sub_hash) -> GalleryRespon
     }
 
 
+def _normalize_f5884405_11768bac(data, base_url, url, sub_hash) -> ImageResponse | dict:
+    meta = data.get("metadata", [])
+    urls = data.get("urls", [])
+    if not meta:
+        return {"nsfw": True}
+    m = meta[0]
+    is_video = (m.get("extension") or "").lower() in ("mp4", "webm", "mov")
+    asset_url = None
+    if urls:
+        headers = {"Referer": url}
+        api_url = request.host_url.rstrip("/")
+        asset_url = (
+            f"{api_url}/api/v1/proxy?headers={quote(json.dumps(headers))}"
+            f"&url={quote(urls[0])}"
+        )
+    return {
+        "renderer": "image",
+        "nsfw": True,
+        "url": asset_url,
+        "type": "video" if is_video else "image",
+        **({"videoUrl": asset_url} if is_video else {}),
+        "description": m.get("title"),
+        **({"authorName": m["user"]} if m.get("user") else {}),
+        **({"authorUrl": f"{base_url}/{m['user']}"} if m.get("user") else {}),
+        "date": m.get("date"),
+    }
+
+
+def _normalize_f5884405_508c0a32(data, base_url, url, sub_hash) -> GalleryResponse:
+    meta = data.get("metadata", [])
+    return {
+        "renderer": "gallery",
+        "nsfw": True,
+        "items": [
+            {
+                "thumbnail": m.get("thumbnail"),
+                "url": m.get("url"),
+                "name": m.get("title"),
+                **({"authorName": m["user"]} if m.get("user") else {}),
+                **(
+                    {"authorUrl": f"{base_url}/{m['user']}"}
+                    if m.get("user")
+                    else {}
+                ),
+            }
+            for m in meta
+        ],
+    }
+
+
 _NORMALIZERS = {
     ("27b9c082", "67b6f7ae"): _normalize_27b9c082_67b6f7ae,
     ("27b9c082", "4b1b2ee4"): _normalize_27b9c082_4b1b2ee4,
@@ -1385,6 +1435,9 @@ _NORMALIZERS = {
     ("39327924", "d4712f67"): _normalize_39327924_d4712f67,
     ("cfe6ea0d", "580366f7"): _normalize_cfe6ea0d_580366f7,
     ("cfe6ea0d", "cb5f3de6"): _normalize_cfe6ea0d_580366f7,
+    ("f5884405", "11768bac"): _normalize_f5884405_11768bac,
+    ("f5884405", "508c0a32"): _normalize_f5884405_508c0a32,
+    ("f5884405", "9caaf4e9"): _normalize_f5884405_508c0a32,
 }
 
 

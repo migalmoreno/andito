@@ -148,13 +148,15 @@ _SEARCH_SUBCATEGORIES = {
 
 _GROUPS_OVERRIDES = {
     ("4ef4b826", "c818bca6"): {
-        "url": "https://www.artstation.com/search?query=QUERY",
         "groups": ["QUERY"],
     },
     ("4ef4b826", "2c98502e"): {
         "url": "https://www.artstation.com/artwork?sorting=FILTER",
         "groups": ["FILTER"],
         "filters": ["trending", "latest", "popular", "community"],
+    },
+    ("f5884405", "9caaf4e9"): {
+        "groups": ["QUERY"],
     },
 }
 
@@ -194,11 +196,7 @@ def get_grouped_extractors():
                         "example": sub["example"],
                         "searchable": sub.get("searchable", True),
                         "nsfw": False,
-                        **(
-                            {"filters": sub["filters"]}
-                            if "filters" in sub
-                            else {}
-                        ),
+                        **({"filters": sub["filters"]} if "filters" in sub else {}),
                     }
                 )
         if exts:
@@ -274,7 +272,11 @@ def get_extractors():
                     {
                         "category": category,
                         "subcategory": extractor.subcategory,
-                        "url": override["url"] if override else extractor_instance.url,
+                        "url": (
+                            override["url"]
+                            if override and "url" in override
+                            else extractor_instance.url
+                        ),
                         "groups": (
                             override["groups"]
                             if override
