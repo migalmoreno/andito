@@ -259,6 +259,17 @@ def _best_reddit_client_id() -> str:
     return cid
 
 
+def mark_reddit_client_id_failed():
+    """Mark the currently active reddit client ID as failed.
+
+    Covers failures the log-based rate-limit handler above can't see,
+    e.g. a WAF/network-security block: gallery-dl raises AbortExtraction
+    directly from a non-JSON response, without ever logging "rate limit
+    exceeded", so the current client ID would otherwise never rotate out.
+    """
+    _reddit_rate_limited_at[_current_reddit_client_id] = time.monotonic()
+
+
 def _reddit_android_ua() -> str:
     version = random.choice(_REDDIT_ANDROID_VERSIONS)
     android = random.randint(9, 14)

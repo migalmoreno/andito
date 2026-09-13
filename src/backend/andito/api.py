@@ -2,7 +2,7 @@ import requests
 import os
 import json
 import tempfile
-from gallery_dl.exception import GalleryDLException, NotFoundError
+from gallery_dl.exception import AbortExtraction, GalleryDLException, NotFoundError
 from gallery_dl.extractor import extractors, find as find_extractor
 from werkzeug.exceptions import HTTPException
 from itertools import groupby
@@ -12,7 +12,7 @@ from urllib.parse import unquote, urlparse
 from http import HTTPStatus
 
 from . import extractors as _extractors_patch
-from .extractors import apply_extractor_config
+from .extractors import apply_extractor_config, mark_reddit_client_id_failed
 from .normalizers import download_post, normalize
 from .utils import fnv1a as _fnv1a
 
@@ -312,7 +312,12 @@ def posts(url=""):
             f"{pagination_start}-{pagination_end}",
         )
 
-    post = download_post(parsed_url)
+    try:
+        post = download_post(parsed_url)
+    except AbortExtraction:
+        if extractor and _fnv1a(extractor.category) == "bd300ce5":
+            mark_reddit_client_id_failed()
+        raise
 
     if extractor:
         category, subcategory = extractor._cfgpath[1], extractor._cfgpath[2]
