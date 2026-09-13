@@ -10,6 +10,7 @@ import {
 const defaultQueryFn: QueryFunction = async ({ queryKey }) => {
   const res = await fetch(
     `${import.meta.env.VITE_API_URL}/api/v1${queryKey[0]}`,
+    { signal: AbortSignal.timeout(15_000) },
   );
   const resData = await res.json();
   if (!res.ok) {
@@ -31,6 +32,8 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+queryClient.setQueryDefaults(["/categories"], { retry: false });
 
 function App() {
   return (
