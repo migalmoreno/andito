@@ -1248,6 +1248,68 @@ def _normalize_d0a6cf69_eee270f5(data, base_url, url, sub_hash) -> GalleryRespon
     }
 
 
+def _normalize_39327924_7cc48931(data, base_url, url, sub_hash) -> ImageResponse | dict:
+    meta = data.get("metadata", [])
+    urls = data.get("urls", [])
+    if not meta:
+        return {}
+    m = meta[0]
+    asset_url = urls[0] if urls else m.get("url")
+    return {
+        "renderer": "image",
+        "url": asset_url,
+        "type": "image",
+        "description": m.get("title"),
+        **({"authorName": m["author"]} if m.get("author") else {}),
+        **({"authorUrl": m["author_url"]} if m.get("author_url") else {}),
+        "date": m.get("date"),
+        **(
+            {"width": m.get("width"), "height": m.get("height")}
+            if m.get("width") and m.get("height")
+            else {}
+        ),
+    }
+
+
+def _normalize_39327924_d4712f67(data, base_url, url, sub_hash) -> GalleryResponse:
+    meta = data.get("metadata", [])
+    urls = data.get("urls", [])
+    return {
+        "renderer": "gallery",
+        "items": [
+            {
+                "thumbnail": urls[i] if i < len(urls) else m.get("url"),
+                "url": f"{base_url}/viewimage/{m['id']}" if m.get("id") else None,
+                "name": m.get("title"),
+                **({"date": m["date"]} if m.get("date") else {}),
+                **({"authorName": m["author"]} if m.get("author") else {}),
+                **({"authorUrl": m["author_url"]} if m.get("author_url") else {}),
+            }
+            for i, m in enumerate(meta)
+        ],
+    }
+
+
+def _normalize_cfe6ea0d_580366f7(data, base_url, url, sub_hash) -> GalleryResponse:
+    meta = data.get("metadata", [])
+    urls = data.get("urls", [])
+    prefix_match = re.match(r"(https?://[^/]+/(?:title|name)/(?:tt|nm)\d+)", url)
+    prefix = prefix_match.group(1) if prefix_match else base_url
+    return {
+        "renderer": "gallery",
+        "items": [
+            {
+                "thumbnail": urls[i] if i < len(urls) else m.get("url"),
+                "url": f"{prefix}/mediaviewer/{m['id']}/" if m.get("id") else None,
+                "name": (m.get("caption") or {}).get("plainText")
+                or m.get("title")
+                or m.get("name"),
+            }
+            for i, m in enumerate(meta)
+        ],
+    }
+
+
 _NORMALIZERS = {
     ("27b9c082", "67b6f7ae"): _normalize_27b9c082_67b6f7ae,
     ("27b9c082", "4b1b2ee4"): _normalize_27b9c082_4b1b2ee4,
@@ -1319,6 +1381,10 @@ _NORMALIZERS = {
     ("6987b443", "d6cf21b3"): _normalize_6987b443_45c4d380,
     ("6987b443", "831a43a1"): _normalize_6987b443_831a43a1,
     ("6987b443", "6b424a7b"): _normalize_6987b443_831a43a1,
+    ("39327924", "7cc48931"): _normalize_39327924_7cc48931,
+    ("39327924", "d4712f67"): _normalize_39327924_d4712f67,
+    ("cfe6ea0d", "580366f7"): _normalize_cfe6ea0d_580366f7,
+    ("cfe6ea0d", "cb5f3de6"): _normalize_cfe6ea0d_580366f7,
 }
 
 
