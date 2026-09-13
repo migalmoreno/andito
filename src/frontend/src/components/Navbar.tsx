@@ -4,9 +4,10 @@ import { Link, useLocation } from "wouter";
 import { Button } from "./Button";
 import { useAppStore } from "~/store";
 import { useShallow } from "zustand/shallow";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Category, Extractor, SubCategory } from "~/types";
 import { ReactNode, useEffect, useMemo, useState } from "react";
+import { useNavigateToSubcategory } from "~/hooks";
 
 export const SharedNavbarSubMenu = () => {
   const [showMobileMenu, dispatch] = useAppStore(
@@ -65,7 +66,7 @@ const SearchForm = () => {
   const [location, navigate] = useLocation();
   const [isCategorySelected, setCategorySelected] = useState<boolean>();
   const [selectedFilter, setSelectedFilter] = useState("");
-  const queryClient = useQueryClient();
+  const navigateToSubcategory = useNavigateToSubcategory();
 
   const [
     categories,
@@ -120,14 +121,7 @@ const SearchForm = () => {
     subcategory?: SubCategory,
   ) => {
     if (subcategory?.searchable === false) {
-      const ext = await queryClient.fetchQuery<Extractor>({
-        queryKey: [
-          `/extractors?category=${categoryName}&subcategory=${subcategory.name}`,
-        ],
-        staleTime: Infinity,
-        gcTime: Infinity,
-      });
-      navigate(`/post/${encodeURIComponent(ext.url)}`);
+      await navigateToSubcategory(categoryName, subcategory);
     }
   };
 
@@ -201,7 +195,7 @@ const SearchForm = () => {
         >
           <SearchIcon size={18} />
         </button>
-        {!categoriesError && (
+        {!categoriesError && categories.length > 0 && (
           <div className="flex gap-x-1 items-center shrink-0">
             <SearchSelect
               value={activeCategory?.name}

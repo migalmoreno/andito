@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
+import { Extractor, SubCategory } from "~/types";
 
 export const useBreakpoint = () => {
   const breakpoints = {
@@ -52,4 +55,27 @@ export const useFetchOnScroll = <T extends Element>(
   }, [handleIntersection]);
 
   return { ref };
+};
+
+export const useNavigateToSubcategory = () => {
+  const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
+
+  return useCallback(
+    async (
+      categoryName: string,
+      subcategory: SubCategory,
+      options?: { replace?: boolean },
+    ) => {
+      const ext = await queryClient.fetchQuery<Extractor>({
+        queryKey: [
+          `/extractors?category=${categoryName}&subcategory=${subcategory.name}`,
+        ],
+        staleTime: Infinity,
+        gcTime: Infinity,
+      });
+      navigate(`/post/${encodeURIComponent(ext.url)}`, options);
+    },
+    [queryClient, navigate],
+  );
 };

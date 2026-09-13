@@ -1,11 +1,51 @@
+import { useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Category } from "~/types";
+import {
+  ErrorContainer,
+  LoadingContainer,
+  NoDataContainer,
+} from "~/components";
+import { useNavigateToSubcategory } from "~/hooks";
+
 export const HomePage = () => {
-  return (
-    <div className="flex flex-auto items-center flex-col justify-center gap-y-4 p-4 text-center">
-      <h1 className="text-3xl font-bold">Andito</h1>
-      <span className="text-neutral-300">
-        A web front-end to image galleries and collections from several hosting
-        sites
-      </span>
-    </div>
-  );
+  const navigateToSubcategory = useNavigateToSubcategory();
+
+  const {
+    data: categories,
+    isError,
+    error,
+    refetch,
+  } = useQuery<Category[]>({
+    queryKey: ["/categories"],
+  });
+
+  const defaultSubcategory = useMemo(() => {
+    for (const category of categories ?? []) {
+      const subcategory = category.subcategories.find(
+        (sub) => sub.searchable === false && !sub.nsfw,
+      );
+      if (subcategory) return { category, subcategory };
+    }
+    return undefined;
+  }, [categories]);
+
+  useEffect(() => {
+    if (!defaultSubcategory) return;
+    navigateToSubcategory(
+      defaultSubcategory.category.name,
+      defaultSubcategory.subcategory,
+      { replace: true },
+    );
+  }, [defaultSubcategory]);
+
+  if (isError) {
+    return <ErrorContainer error={error as Error} onReload={refetch} />;
+  }
+
+  if (!categories || defaultSubcategory) {
+    return <LoadingContainer />;
+  }
+
+  return <NoDataContainer />;
 };
