@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
+import ShakaVideo from "shaka-video-element/react";
 import { GalleryItem, BoardItem, ThreadPost, ThreadResponse } from "~/types";
 import { formatTimeAgo } from "~/utils";
 import { Bullet } from "./Bullet";
@@ -198,6 +199,8 @@ export const ThreadPostContainer = ({ post }: ThreadPostContainerProps) => {
   const isVideo =
     post?.mediaType === "video" ||
     /\.(mp4|webm|mov|m4v)(\?|$)/i.test(post?.url ?? "");
+  const isHls = /\.m3u8(\?|$)/i.test(post?.url ?? "");
+  const videoUrl = isHls && post?.url ? post.url : proxyUrl(post?.url ?? "");
   const hasStats = (post?.score ?? 0) > 0 || (post?.count ?? 0) > 0;
   const bookmarkUrl = post?.postUrl;
   const bookmarked = bookmarkUrl ? isBookmarked(bookmarkUrl) : false;
@@ -291,12 +294,12 @@ export const ThreadPostContainer = ({ post }: ThreadPostContainerProps) => {
           <>
             {mediaOpen ? (
               isVideo ? (
-                <video
-                  src={proxyUrl(post.url)}
+                <ShakaVideo
+                  src={videoUrl}
                   className="max-w-xs rounded-lg"
                   controls
                   playsInline
-                  autoPlay
+                  autoplay
                 />
               ) : (
                 <img

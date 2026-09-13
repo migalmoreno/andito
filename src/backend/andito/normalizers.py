@@ -710,8 +710,8 @@ def _normalize_bd300ce5_578a8689(data, base_url, url, sub_hash) -> ThreadRespons
             if m.get("is_video"):
                 reddit_video = (m.get("media") or {}).get("reddit_video") or {}
                 media_url = (
-                    reddit_video.get("fallback_url")
-                    or reddit_video.get("hls_url")
+                    reddit_video.get("hls_url")
+                    or reddit_video.get("fallback_url")
                     or None
                 )
                 media_type = "video"
