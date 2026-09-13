@@ -216,7 +216,13 @@ def _reddit_android_ua() -> str:
     return f"Reddit/{version}/Android {android}"
 
 
-_DISPATCH_INCLUDE_ALL_CATEGORIES = ("5c6e7131", "e88db17b", "b8d92073", "f3a30c28")
+_DISPATCH_INCLUDE_ALL_CATEGORIES = (
+    "5c6e7131",
+    "e88db17b",
+    "b8d92073",
+    "f3a30c28",
+    "fb2fff6e",
+)
 
 
 def apply_extractor_config(category, subcategory, pagination):
@@ -240,6 +246,15 @@ def apply_extractor_config(category, subcategory, pagination):
             "6b424a7b",
         ):
             config.set(("extractor",), "chapter-range", pagination)
+        case ("fb2fff6e", sub) if sub in (
+            "494f3b89",
+            "4ebd17e2",
+            "25dd196e",
+            "7d93564d",
+            "651df0de",
+            "69f3c98a",
+        ):
+            config.set(("extractor",), "post-range", pagination)
         case ("bd300ce5", sub) if sub in (
             "2493dc95",
             "2c906dae",
