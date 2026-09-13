@@ -161,6 +161,7 @@ def get_grouped_extractors():
                     "category": ext.basecategory or ext.category,
                     "example": ext.example,
                     "searchable": normalized.get("searchable", True),
+                    "nsfw": normalized.get("nsfw", False),
                 }
             )
         if _fnv1a(k) == "bd300ce5" and exts:

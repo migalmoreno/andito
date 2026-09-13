@@ -4,6 +4,7 @@ export interface SubCategory {
   category: string;
   description?: string;
   searchable?: boolean;
+  nsfw?: boolean;
 }
 
 export interface Category {

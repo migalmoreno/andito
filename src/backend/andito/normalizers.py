@@ -63,6 +63,7 @@ class GalleryResponse(TypedDict):
     renderer: Literal["gallery"]
     items: list[GalleryItem]
     searchable: NotRequired[bool]
+    nsfw: NotRequired[bool]
 
 
 class ImageStats(TypedDict):
@@ -92,6 +93,7 @@ class ImageResponse(TypedDict):
     stats: NotRequired[ImageStats]
     width: NotRequired[int]
     height: NotRequired[int]
+    nsfw: NotRequired[bool]
 
 
 class UserInfoStats(TypedDict):
@@ -457,6 +459,7 @@ def _normalize_ce200ea0_404ea5a3(data, base_url, url, sub_hash) -> GalleryRespon
     ]
     return {
         "renderer": "gallery",
+        "nsfw": True,
         **({"searchable": False} if sub_hash in ("36c7e141", "1601e678") else {}),
         "items": items,
     }
@@ -465,12 +468,13 @@ def _normalize_ce200ea0_404ea5a3(data, base_url, url, sub_hash) -> GalleryRespon
 def _normalize_ce200ea0_5262c92a(data, base_url, url, sub_hash) -> ImageResponse | dict:
     meta = data.get("metadata", [])
     if not meta:
-        return {}
+        return {"nsfw": True}
     m = meta[0]
     posts = data.get("post", [])
     p = posts[0] if posts else {}
     return {
         "renderer": "image",
+        "nsfw": True,
         "url": p.get("url"),
         "videoUrl": p.get("url"),
         "type": "video" if m.get("extension") in ("mp4", "mov") else "image",
