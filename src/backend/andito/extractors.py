@@ -227,6 +227,13 @@ def apply_extractor_config(category, subcategory, pagination):
             config.set(("extractor", category, subcategory), "tiktok-range", pagination)
         case ("c0d3c7b1", "1692405e") | ("03bfedaf", "e7d2ac0d"):
             config.set(("extractor",), "chapter-range", pagination)
+        case ("6987b443", sub) if sub in (
+            "45c4d380",
+            "d6cf21b3",
+            "831a43a1",
+            "6b424a7b",
+        ):
+            config.set(("extractor",), "chapter-range", pagination)
         case ("bd300ce5", sub) if sub in (
             "2493dc95",
             "2c906dae",

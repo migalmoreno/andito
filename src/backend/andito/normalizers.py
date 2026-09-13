@@ -840,6 +840,148 @@ def _normalize_b8d92073_33295e95(data, base_url, url, sub_hash) -> ImageResponse
     }
 
 
+def _normalize_6987b443_246a90b8(data, base_url, url, sub_hash) -> ImageResponse | dict:
+    meta = data.get("metadata", [])
+    if not meta:
+        return {}
+    m = meta[0]
+    is_video = bool(m.get("has_sound") or m.get("is_animated"))
+    return {
+        "renderer": "image",
+        "url": m.get("url"),
+        "type": "video" if is_video else "image",
+        "filename": m.get("name") or m.get("filename"),
+        "date": m.get("date"),
+        "description": m.get("description"),
+        **({"videoUrl": m.get("url")} if is_video else {}),
+        **(
+            {"stats": {"likes": m["point_count"]}}
+            if m.get("point_count") is not None
+            else {}
+        ),
+        **(
+            {"width": m.get("width"), "height": m.get("height")}
+            if m.get("width") and m.get("height")
+            else {}
+        ),
+    }
+
+
+def _normalize_6987b443_220a21da(data, base_url, url, sub_hash) -> GalleryResponse:
+    meta = data.get("metadata", [])
+    return {
+        "renderer": "gallery",
+        "items": [
+            {
+                "thumbnail": img.get("url"),
+                "url": f"{base_url}/{img['id']}",
+                "name": img.get("title"),
+                "date": img.get("date"),
+                **(
+                    {"score": img["album"]["score"]}
+                    if (img.get("album") or {}).get("score") is not None
+                    else {}
+                ),
+            }
+            for img in meta
+        ],
+    }
+
+
+def _normalize_6987b443_f5b01daf(
+    data, base_url, url, sub_hash
+) -> GalleryResponse | ImageResponse | dict:
+    urls = data.get("urls", [])
+    if not urls:
+        return {}
+    target_url = urls[0]
+    target_data = download_post(target_url)
+    if "/a/" in target_url:
+        return _normalize_6987b443_220a21da(target_data, base_url, target_url, sub_hash)
+    return _normalize_6987b443_246a90b8(target_data, base_url, target_url, sub_hash)
+
+
+def _normalize_6987b443_45c4d380(data, base_url, url, sub_hash) -> MediaBoardResponse:
+    meta = data.get("metadata", [])
+    urls = data.get("urls", [])
+    return {
+        "renderer": "media-board",
+        "items": [
+            {
+                "url": urls[i] if i < len(urls) else None,
+                "name": post.get("title"),
+                "thumbnail": (
+                    f"https://i.imgur.com/{post['cover']}m.jpg"
+                    if post.get("is_album") and post.get("cover")
+                    else f"https://i.imgur.com/{post['id']}m.jpg"
+                ),
+                "count": post.get("images_count"),
+                "score": post.get("score"),
+                "description": post.get("description"),
+                **(
+                    {
+                        "date": datetime.utcfromtimestamp(
+                            post["datetime"]
+                        ).isoformat()
+                        + "Z"
+                    }
+                    if post.get("datetime")
+                    else {}
+                ),
+            }
+            for i, post in enumerate(meta)
+        ],
+    }
+
+
+def _normalize_6987b443_831a43a1(data, base_url, url, sub_hash) -> GalleryResponse:
+    meta = data.get("metadata", [])
+    urls = data.get("urls", [])
+    return {
+        "renderer": "gallery",
+        "items": [
+            {
+                "url": urls[i] if i < len(urls) else None,
+                "thumbnail": (
+                    f"https://i.imgur.com/{post['cover']}m.jpg"
+                    if post.get("is_album") and post.get("cover")
+                    else f"https://i.imgur.com/{post['id']}m.jpg"
+                ),
+                "name": post.get("title"),
+                "score": post.get("score"),
+                **(
+                    {
+                        "authorName": post["account_url"],
+                        "authorUrl": f"{base_url}/user/{post['account_url']}",
+                    }
+                    if post.get("account_url")
+                    else {}
+                ),
+                **(
+                    {
+                        "groupName": post["tags"][0].get("display_name")
+                        or post["tags"][0].get("name"),
+                        "groupUrl": f"{base_url}/t/{post['tags'][0]['name']}",
+                    }
+                    if post.get("tags")
+                    else {}
+                ),
+                **(
+                    {
+                        "date": datetime.utcfromtimestamp(
+                            post["datetime"]
+                        ).isoformat()
+                        + "Z"
+                    }
+                    if post.get("datetime")
+                    else {}
+                ),
+            }
+            for i, post in enumerate(meta)
+        ],
+    }
+
+
 _NORMALIZERS = {
     ("27b9c082", "67b6f7ae"): _normalize_27b9c082_67b6f7ae,
     ("27b9c082", "4b1b2ee4"): _normalize_27b9c082_4b1b2ee4,
@@ -876,6 +1018,13 @@ _NORMALIZERS = {
     ("bd300ce5", "0160e943"): _normalize_bd300ce5_2493dc95,
     ("bd300ce5", "578a8689"): _normalize_bd300ce5_578a8689,
     ("b8d92073", "33295e95"): _normalize_b8d92073_33295e95,
+    ("6987b443", "246a90b8"): _normalize_6987b443_246a90b8,
+    ("6987b443", "220a21da"): _normalize_6987b443_220a21da,
+    ("6987b443", "f5b01daf"): _normalize_6987b443_f5b01daf,
+    ("6987b443", "45c4d380"): _normalize_6987b443_831a43a1,
+    ("6987b443", "d6cf21b3"): _normalize_6987b443_45c4d380,
+    ("6987b443", "831a43a1"): _normalize_6987b443_831a43a1,
+    ("6987b443", "6b424a7b"): _normalize_6987b443_831a43a1,
 }
 
 
