@@ -3,6 +3,7 @@ import json
 import os
 import re
 from datetime import datetime
+from email.utils import parsedate_to_datetime as _parsedate_to_datetime
 from typing import Literal, NotRequired, TypedDict
 from urllib.parse import quote, urljoin, urlparse
 
@@ -51,12 +52,15 @@ def download_post(url):
 class GalleryItem(TypedDict):
     thumbnail: NotRequired[str | None]
     url: NotRequired[str | None]
+    name: NotRequired[str]
     authorName: NotRequired[str]
     authorThumbnail: NotRequired[str]
     authorUrl: NotRequired[str]
     groupName: NotRequired[str]
     groupThumbnail: NotRequired[str]
     groupUrl: NotRequired[str]
+    score: NotRequired[int]
+    date: NotRequired[str]
 
 
 class GalleryResponse(TypedDict):
@@ -372,6 +376,7 @@ def _normalize_c0d3c7b1_1776446d(data, base_url, url, sub_hash) -> GalleryRespon
             {
                 "thumbnail": post.get("url"),
                 "url": f"{base_url}/pin/{post['id']}",
+                "name": post.get("title") or post.get("grid_title"),
                 "authorName": post["pinner"]["username"],
                 "authorThumbnail": post["pinner"]["image_small_url"],
                 "authorUrl": f"{base_url}/{post['pinner']['username']}",
@@ -379,6 +384,16 @@ def _normalize_c0d3c7b1_1776446d(data, base_url, url, sub_hash) -> GalleryRespon
                 "groupThumbnail": (post.get("board") or {}).get("image_cover_url"),
                 "groupUrl": (
                     f"{base_url}{post['board']['url']}" if post.get("board") else None
+                ),
+                **(
+                    {"date": _parsedate_to_datetime(post["created_at"]).isoformat()}
+                    if post.get("created_at")
+                    else {}
+                ),
+                **(
+                    {"score": sum(post["reaction_counts"].values())}
+                    if post.get("reaction_counts")
+                    else {}
                 ),
             }
             for post in meta

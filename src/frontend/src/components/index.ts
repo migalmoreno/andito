@@ -7,7 +7,7 @@ export { ErrorContainer } from "./ErrorContainer";
 export { Layout } from "./Layout";
 export { LoadingContainer } from "./LoadingContainer";
 export { NoDataContainer } from "./NoDataContainer";
-export { UserAvatar } from "./UserAvatar";
+export { UserAvatar, GroupAvatar } from "./UserAvatar";
 export { Navbar } from "./Navbar";
 export { Sidebar, MobileMenu } from "./Sidebar";
 export { SharedNavbarSubMenu } from "./Navbar";

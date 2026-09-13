@@ -4,7 +4,7 @@ import { Link } from "wouter";
 import { GalleryItem, BoardItem, ThreadPost, ThreadResponse } from "~/types";
 import { formatTimeAgo } from "~/utils";
 import { Bullet } from "./Bullet";
-import { UserAvatar } from "./UserAvatar";
+import { UserAvatar, GroupAvatar } from "./UserAvatar";
 import {
   Bookmark,
   BookmarkCheck,
@@ -25,7 +25,12 @@ export const ImagePostContainer = ({
   post,
   extraClassName,
 }: ImagePostContainerProps) => {
-  const metadata = post?.authorName && post.groupName;
+  const metadata =
+    post?.name ||
+    post?.authorName ||
+    post?.groupName ||
+    post?.score ||
+    post?.date;
   return (
     <div
       className={`min-h-[500px] h-[500px] xs:min-h-[300px] xs:h-[300px] lg:h-[500px] relative rounded-xl overflow-hidden bg-neutral-800 w-full ${extraClassName} ${metadata ? "before:content-[''] before:absolute before:bg-linear-to-b before:from-transparent before:to-black/80 before:z-0 before:from-50% before:top-0 before:bottom-0 before:right-0 before:left-0 before:z-0 before:pointer-events-none" : ""} `}
@@ -46,6 +51,26 @@ export const ImagePostContainer = ({
       {metadata && (
         <div className="absolute bottom-0 w-full p-2 flex items-end">
           <div className="relative flex flex-col gap-y-2 text-sm justify-end w-full">
+            {post?.groupName && (
+              <div className="flex gap-x-2 items-center self-end">
+                In
+                <Link
+                  className="flex gap-x-2 text-neutral-100 font-medium items-center"
+                  href={
+                    post?.groupUrl
+                      ? `/post/${encodeURIComponent(post?.groupUrl)}`
+                      : ""
+                  }
+                  title={post?.groupName}
+                >
+                  <GroupAvatar
+                    extraClassNames="h-6 w-6"
+                    thumbnail={post?.groupThumbnail}
+                  />
+                  <span className="line-clamp-1">{post?.groupName}</span>
+                </Link>
+              </div>
+            )}
             {post?.authorName && (
               <Link
                 className="flex gap-x-2"
@@ -60,27 +85,26 @@ export const ImagePostContainer = ({
                   extraClassNames="h-6 w-6"
                   thumbnail={post?.authorThumbnail}
                 />
-                <span className="line-clamp-1">{post?.authorName}</span>
+                <span className="line-clamp-1 font-semibold">
+                  {post?.authorName}
+                </span>
               </Link>
             )}
-            {post?.groupName && (
-              <div className="flex gap-x-2 items-center">
-                In
-                <Link
-                  className="flex gap-x-2 text-neutral-100 font-medium items-center"
-                  href={
-                    post?.groupUrl
-                      ? `/post/${encodeURIComponent(post?.groupUrl)}`
-                      : ""
-                  }
-                  title={post?.groupName}
-                >
-                  <UserAvatar
-                    extraClassNames="h-6 w-6"
-                    thumbnail={post?.groupThumbnail}
-                  />
-                  <span className="line-clamp-1">{post?.groupName}</span>
-                </Link>
+            {post?.name && (
+              <span className="line-clamp-2 break-words">{post.name}</span>
+            )}
+            {(post?.score || post?.date) && (
+              <div className="flex items-center gap-x-1.5 text-neutral-300 text-xs">
+                {(post?.score ?? 0) > 0 && (
+                  <span className="flex items-center gap-x-1">
+                    <ArrowUp size={12} />
+                    {post!.score}
+                  </span>
+                )}
+                {(post?.score ?? 0) > 0 && post?.date && <Bullet />}
+                {post?.date && (
+                  <span>{formatTimeAgo(new Date(post.date))}</span>
+                )}
               </div>
             )}
           </div>
@@ -156,12 +180,13 @@ export const ThreadPostContainer = ({ post }: ThreadPostContainerProps) => {
     }
   }, [showReplies]);
 
-  const { data: repliesData, isFetching: repliesFetching } = useQuery<ThreadResponse>({
-    enabled: !!currentReplyUrl,
-    queryKey: [`/posts/${encodeURIComponent(currentReplyUrl ?? "")}`],
-    staleTime: Infinity,
-    gcTime: Infinity,
-  });
+  const { data: repliesData, isFetching: repliesFetching } =
+    useQuery<ThreadResponse>({
+      enabled: !!currentReplyUrl,
+      queryKey: [`/posts/${encodeURIComponent(currentReplyUrl ?? "")}`],
+      staleTime: Infinity,
+      gcTime: Infinity,
+    });
 
   useEffect(() => {
     if (!repliesData) return;

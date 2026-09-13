@@ -29,12 +29,15 @@ export interface Extractor {
 export interface GalleryItem {
   thumbnail?: string;
   url?: string;
+  name?: string;
   authorName?: string;
   authorThumbnail?: string;
   authorUrl?: string;
   groupName?: string;
   groupThumbnail?: string;
   groupUrl?: string;
+  score?: number;
+  date?: string;
 }
 
 export interface GalleryResponse {

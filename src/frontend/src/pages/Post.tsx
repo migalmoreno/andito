@@ -39,7 +39,7 @@ import {
   ThreadPostContainer,
   ItemsContainer,
 } from "~/components";
-import { ErrorContainer, UserAvatar } from "~/components";
+import { ErrorContainer, UserAvatar, GroupAvatar } from "~/components";
 import { formatTimeAgo } from "~/utils";
 
 const Gallery = ({
@@ -262,45 +262,47 @@ const ImageView = ({
           <div
             className={`md:border-l border-neutral-800 md:p-0 flex flex-col gap-y-2 py-4 p-2 ${hasAspect ? "md:flex-1 lg:flex-initial lg:w-[400px] lg:max-h-[calc(100dvh-60px-4rem-2px)]" : "md:w-[380px] md:shrink-0"}`}
           >
-            <div className="md:border-b border-neutral-800 md:p-4 flex gap-x-2 gap-y-4 items-center px-2 justify-between md:justify-normal md:flex-wrap text-sm">
-              <div className="flex items-center gap-x-2">
-                {data.authorThumbnail && (
-                  <UserAvatar
-                    thumbnail={data.authorThumbnail}
-                    extraClassNames="h-10 w-10 border border-neutral-800"
-                  />
+            {(data.authorName || data.groupName) && (
+              <div className="md:border-b border-neutral-800 md:p-4 flex gap-x-2 gap-y-4 items-center px-2 justify-between md:justify-normal md:flex-wrap text-sm">
+                {data.authorName && (
+                  <div className="flex items-center gap-x-2">
+                    <UserAvatar
+                      thumbnail={data.authorThumbnail}
+                      extraClassNames="h-10 w-10 border border-neutral-800"
+                    />
+                    {data.authorUrl ? (
+                      <Link
+                        href={`/post/${encodeURIComponent(data.authorUrl)}`}
+                        className="font-semibold"
+                      >
+                        {data.authorName}
+                      </Link>
+                    ) : (
+                      <span className="font-semibold">{data.authorName}</span>
+                    )}
+                  </div>
                 )}
-                {data.authorUrl ? (
-                  <Link
-                    href={`/post/${encodeURIComponent(data.authorUrl)}`}
-                    className="font-semibold"
-                  >
-                    {data.authorName}
-                  </Link>
-                ) : (
-                  <span className="font-semibold">{data.authorName}</span>
+                {data.groupName && (
+                  <div className="flex gap-x-2 items-center">
+                    In
+                    <Link
+                      className="flex gap-x-2 text-neutral-100 font-medium items-center"
+                      href={
+                        data.groupUrl
+                          ? `/post/${encodeURIComponent(data.groupUrl)}`
+                          : ""
+                      }
+                    >
+                      <GroupAvatar
+                        extraClassNames="h-6 w-6"
+                        thumbnail={data.groupThumbnail}
+                      />
+                      <span className="line-clamp-1">{data.groupName}</span>
+                    </Link>
+                  </div>
                 )}
               </div>
-              {data.groupName && (
-                <div className="flex gap-x-2 items-center">
-                  In
-                  <Link
-                    className="flex gap-x-2 text-neutral-100 font-medium items-center"
-                    href={
-                      data.groupUrl
-                        ? `/post/${encodeURIComponent(data.groupUrl)}`
-                        : ""
-                    }
-                  >
-                    <UserAvatar
-                      extraClassNames="h-6 w-6"
-                      thumbnail={data.groupThumbnail}
-                    />
-                    <span className="line-clamp-1">{data.groupName}</span>
-                  </Link>
-                </div>
-              )}
-            </div>
+            )}
             <div className="flex-auto overflow-y-auto overflow-x-hidden min-h-0">
               {data.description && (
                 <>
