@@ -4,7 +4,7 @@ import {
   MediaBoardItemContainer,
   NoDataContainer,
 } from "~/components";
-import { X } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
 export const BookmarksPage = () => {
   const { bookmarks, remove, _hasHydrated } = useBookmarkStore();
@@ -26,10 +26,10 @@ export const BookmarksPage = () => {
           />
           <button
             onClick={() => remove(bookmark.url)}
-            className="absolute top-1.5 right-1.5 p-1 rounded-md bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/80"
+            className="absolute top-1.5 right-1.5 p-1 rounded-md bg-black/60 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity hover:bg-black/80"
             title="Remove bookmark"
           >
-            <X size={12} className="text-white" />
+            <Trash2 size={12} className="text-white" />
           </button>
         </div>
       ))}
