@@ -116,11 +116,15 @@ const SearchForm = () => {
     setSelectedFilter("");
   }, [activeSubCategory?.name]);
 
-  const handleNonSearchableSubcategory = async (
+  const handleAutoNavigableSubcategory = async (
     categoryName: string,
     subcategory?: SubCategory,
   ) => {
-    if (subcategory?.searchable === false) {
+    if (!subcategory) return;
+    if (
+      subcategory.searchable === false ||
+      (subcategory.filters?.length ?? 0) > 0
+    ) {
       await navigateToSubcategory(categoryName, subcategory);
     }
   };
@@ -210,7 +214,7 @@ const SearchForm = () => {
                     ? category.subcategories[0]
                     : undefined;
                 dispatch({ type: "setActiveSubCategory", subcategory });
-                await handleNonSearchableSubcategory(
+                await handleAutoNavigableSubcategory(
                   category.name,
                   subcategory,
                 );
@@ -231,7 +235,7 @@ const SearchForm = () => {
                     (subcategory) => subcategory.name === e.target.value,
                   ) as SubCategory;
                   dispatch({ type: "setActiveSubCategory", subcategory });
-                  await handleNonSearchableSubcategory(
+                  await handleAutoNavigableSubcategory(
                     activeCategory?.name ?? "",
                     subcategory,
                   );

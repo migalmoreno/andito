@@ -5,6 +5,7 @@ export interface SubCategory {
   description?: string;
   searchable?: boolean;
   nsfw?: boolean;
+  filters?: string[];
 }
 
 export interface Category {

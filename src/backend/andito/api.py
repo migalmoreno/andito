@@ -146,6 +146,18 @@ _SEARCH_SUBCATEGORIES = {
     },
 }
 
+_GROUPS_OVERRIDES = {
+    ("4ef4b826", "c818bca6"): {
+        "url": "https://www.artstation.com/search?query=QUERY",
+        "groups": ["QUERY"],
+    },
+    ("4ef4b826", "2c98502e"): {
+        "url": "https://www.artstation.com/artwork?sorting=FILTER",
+        "groups": ["FILTER"],
+        "filters": ["trending", "latest", "popular", "community"],
+    },
+}
+
 
 def get_grouped_extractors():
     groups = []
@@ -155,6 +167,9 @@ def get_grouped_extractors():
             normalized = normalize(ext.category, ext.subcategory, {}, "")
             if normalized is None:
                 continue
+            override = _GROUPS_OVERRIDES.get(
+                (_fnv1a(k), _fnv1a(ext.category + ext.subcategory))
+            )
             exts.append(
                 {
                     "name": ext.subcategory,
@@ -162,6 +177,11 @@ def get_grouped_extractors():
                     "example": ext.example,
                     "searchable": normalized.get("searchable", True),
                     "nsfw": normalized.get("nsfw", False),
+                    **(
+                        {"filters": override["filters"]}
+                        if override and "filters" in override
+                        else {}
+                    ),
                 }
             )
         if _fnv1a(k) == "bd300ce5" and exts:
@@ -173,6 +193,12 @@ def get_grouped_extractors():
                         "category": cat,
                         "example": sub["example"],
                         "searchable": sub.get("searchable", True),
+                        "nsfw": False,
+                        **(
+                            {"filters": sub["filters"]}
+                            if "filters" in sub
+                            else {}
+                        ),
                     }
                 )
         if exts:
@@ -241,13 +267,25 @@ def get_extractors():
             )
             if match := extractor.pattern.match(extractor.example):
                 extractor_instance = extractor(match)
+                override = _GROUPS_OVERRIDES.get(
+                    (_fnv1a(category), _fnv1a(category + subcategory))
+                )
                 return make_response(
                     {
                         "category": category,
                         "subcategory": extractor.subcategory,
-                        "url": extractor_instance.url,
-                        "groups": extractor_instance.groups,
+                        "url": override["url"] if override else extractor_instance.url,
+                        "groups": (
+                            override["groups"]
+                            if override
+                            else extractor_instance.groups
+                        ),
                         "configPath": extractor_instance._cfgpath,
+                        **(
+                            {"filters": override["filters"]}
+                            if override and "filters" in override
+                            else {}
+                        ),
                     }
                 )
 

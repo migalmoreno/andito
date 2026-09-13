@@ -23,7 +23,9 @@ export const HomePage = () => {
   const defaultSubcategory = useMemo(() => {
     for (const category of categories ?? []) {
       const subcategory = category.subcategories.find(
-        (sub) => sub.searchable === false && !sub.nsfw,
+        (sub) =>
+          (sub.searchable === false || (sub.filters?.length ?? 0) > 0) &&
+          !sub.nsfw,
       );
       if (subcategory) return { category, subcategory };
     }

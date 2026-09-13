@@ -74,7 +74,14 @@ export const useNavigateToSubcategory = () => {
         staleTime: Infinity,
         gcTime: Infinity,
       });
-      navigate(`/post/${encodeURIComponent(ext.url)}`, options);
+      const resolvedUrl =
+        ext.filters && ext.filters.length > 0
+          ? ext.url.replace(
+              /(^|[^a-zA-Z0-9])FILTER([^a-zA-Z0-9]|$)/g,
+              `$1${ext.filters[0]}$2`,
+            )
+          : ext.url;
+      navigate(`/post/${encodeURIComponent(resolvedUrl)}`, options);
     },
     [queryClient, navigate],
   );
