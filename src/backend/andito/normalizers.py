@@ -1031,6 +1031,77 @@ def _normalize_6987b443_831a43a1(data, base_url, url, sub_hash) -> GalleryRespon
     }
 
 
+def _normalize_4ef4b826_58c6828b(
+    data, base_url, url, sub_hash
+) -> ImageResponse | GalleryResponse | dict:
+    meta = data.get("metadata", [])
+    urls = data.get("urls", [])
+    if not meta:
+        return {}
+    m = meta[0]
+    a = m.get("asset") or {}
+    user = m.get("user") or {}
+    is_video = bool(a.get("has_embedded_player"))
+    asset_url = urls[0] if urls else a.get("image_url")
+    return {
+        "renderer": "image",
+        "url": asset_url,
+        "type": "video" if is_video else "image",
+        **({"videoUrl": asset_url} if is_video else {}),
+        "description": m.get("description"),
+        "authorName": user.get("username"),
+        **(
+            {"authorUrl": user["permalink"]}
+            if user.get("permalink")
+            else {}
+        ),
+        **(
+            {"authorThumbnail": user["large_avatar_url"]}
+            if user.get("large_avatar_url")
+            else {}
+        ),
+        "date": m.get("date"),
+        **(
+            {"stats": {"likes": m["likes_count"]}}
+            if m.get("likes_count") is not None
+            else {}
+        ),
+        **(
+            {"width": a.get("width"), "height": a.get("height")}
+            if a.get("width") and a.get("height")
+            else {}
+        ),
+    }
+
+
+def _normalize_4ef4b826_c0515ad9(data, base_url, url, sub_hash) -> GalleryResponse:
+    meta = data.get("metadata", [])
+    urls = data.get("urls", [])
+    return {
+        "renderer": "gallery",
+        "items": [
+            {
+                "thumbnail": (
+                    urls[i]
+                    if i < len(urls)
+                    else (m.get("asset") or {}).get("image_url")
+                ),
+                "url": m.get("permalink"),
+                "name": m.get("title"),
+                "score": m.get("likes_count"),
+                "date": m.get("date"),
+                "authorName": (m.get("user") or {}).get("username"),
+                "authorUrl": (m.get("user") or {}).get("permalink"),
+                "authorThumbnail": (m.get("user") or {}).get(
+                    "medium_avatar_url"
+                ),
+            }
+            for i, m in enumerate(meta)
+            if m.get("num") == 1
+        ],
+    }
+
+
 _NORMALIZERS = {
     ("27b9c082", "67b6f7ae"): _normalize_27b9c082_67b6f7ae,
     ("27b9c082", "4b1b2ee4"): _normalize_27b9c082_4b1b2ee4,
@@ -1046,6 +1117,13 @@ _NORMALIZERS = {
     ("e88db17b", "3182dbad"): _normalize_e88db17b_3182dbad,
     ("e88db17b", "b8cce8c3"): _normalize_e88db17b_3182dbad,
     ("e88db17b", "a75dfb22"): _normalize_e88db17b_3182dbad,
+    ("4ef4b826", "58c6828b"): _normalize_4ef4b826_58c6828b,
+    ("4ef4b826", "c0515ad9"): _normalize_4ef4b826_c0515ad9,
+    ("4ef4b826", "669459d5"): _normalize_4ef4b826_c0515ad9,
+    ("4ef4b826", "b70ea29a"): _normalize_4ef4b826_c0515ad9,
+    ("4ef4b826", "d1e0f51e"): _normalize_4ef4b826_c0515ad9,
+    ("4ef4b826", "c818bca6"): _normalize_4ef4b826_c0515ad9,
+    ("4ef4b826", "2c98502e"): _normalize_4ef4b826_c0515ad9,
     ("f3a30c28", "3418ee8b"): _normalize_f3a30c28_3418ee8b,
     ("f3a30c28", "246f9606"): _normalize_f3a30c28_246f9606,
     ("f3a30c28", "6b6a3fc1"): _normalize_f3a30c28_6b6a3fc1,
