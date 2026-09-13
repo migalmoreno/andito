@@ -1193,6 +1193,61 @@ def _normalize_fb2fff6e_494f3b89(data, base_url, url, sub_hash) -> MediaBoardRes
     }
 
 
+def _normalize_d0a6cf69_82a45cae(data, base_url, url, sub_hash) -> ImageResponse | dict:
+    meta = data.get("metadata", [])
+    urls = data.get("urls", [])
+    if not meta:
+        return {}
+    m = meta[0]
+    user = m.get("user") or {}
+    asset_url = urls[0] if urls else None
+    is_video = (m.get("format") or "").lower() in ("mp4", "webm")
+    return {
+        "renderer": "image",
+        "url": asset_url,
+        "type": "video" if is_video else "image",
+        **({"videoUrl": asset_url} if is_video else {}),
+        "description": m.get("description") or m.get("title"),
+        **({"authorName": user["username"]} if user.get("username") else {}),
+        **({"authorUrl": user["url"]} if user.get("url") else {}),
+        "date": m.get("date"),
+        **({"stats": {"likes": m["shares"]}} if m.get("shares") is not None else {}),
+        **(
+            {"width": m.get("width"), "height": m.get("height")}
+            if m.get("width") and m.get("height")
+            else {}
+        ),
+    }
+
+
+def _normalize_d0a6cf69_eee270f5(data, base_url, url, sub_hash) -> GalleryResponse:
+    meta = data.get("metadata", [])
+    urls = data.get("urls", [])
+    return {
+        "renderer": "gallery",
+        "items": [
+            {
+                "thumbnail": urls[i] if i < len(urls) else None,
+                "url": m.get("itemurl"),
+                "name": m.get("title"),
+                "score": m.get("shares"),
+                **({"date": m["date"]} if m.get("date") else {}),
+                **(
+                    {"authorName": (m.get("user") or {})["username"]}
+                    if (m.get("user") or {}).get("username")
+                    else {}
+                ),
+                **(
+                    {"authorUrl": (m.get("user") or {})["url"]}
+                    if (m.get("user") or {}).get("url")
+                    else {}
+                ),
+            }
+            for i, m in enumerate(meta)
+        ],
+    }
+
+
 _NORMALIZERS = {
     ("27b9c082", "67b6f7ae"): _normalize_27b9c082_67b6f7ae,
     ("27b9c082", "4b1b2ee4"): _normalize_27b9c082_4b1b2ee4,
@@ -1226,6 +1281,9 @@ _NORMALIZERS = {
     ("4ef4b826", "d1e0f51e"): _normalize_4ef4b826_c0515ad9,
     ("4ef4b826", "c818bca6"): _normalize_4ef4b826_c0515ad9,
     ("4ef4b826", "2c98502e"): _normalize_4ef4b826_c0515ad9,
+    ("d0a6cf69", "82a45cae"): _normalize_d0a6cf69_82a45cae,
+    ("d0a6cf69", "eee270f5"): _normalize_d0a6cf69_eee270f5,
+    ("d0a6cf69", "99ea9936"): _normalize_d0a6cf69_eee270f5,
     ("f3a30c28", "3418ee8b"): _normalize_f3a30c28_3418ee8b,
     ("f3a30c28", "246f9606"): _normalize_f3a30c28_246f9606,
     ("f3a30c28", "6b6a3fc1"): _normalize_f3a30c28_6b6a3fc1,
