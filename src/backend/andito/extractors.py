@@ -216,12 +216,18 @@ def _reddit_android_ua() -> str:
     return f"Reddit/{version}/Android {android}"
 
 
+_DISPATCH_INCLUDE_ALL_CATEGORIES = ("5c6e7131", "e88db17b", "b8d92073", "f3a30c28")
+
+
 def apply_extractor_config(category, subcategory, pagination):
     start, end = (int(x) for x in pagination.split("-"))
     page_size = end - start + 1
+
+    if _fnv1a(category) in _DISPATCH_INCLUDE_ALL_CATEGORIES:
+        config.set(("extractor", category), "include", "all")
+
     match (_fnv1a(category), _fnv1a(category + subcategory)):
         case ("e88db17b", _):
-            config.set(("extractor", "instagram"), "cookies-from-browser", "chrome")
             config.set(("extractor",), "image-range", pagination)
         case ("b8d92073", "70206412"):
             config.set(("extractor", category, subcategory), "tiktok-range", pagination)

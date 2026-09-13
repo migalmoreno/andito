@@ -3,15 +3,6 @@
     "mode": null
   },
   "extractor": {
-    "browser": "chrome",
-    "facebook": {
-      "include": "all"
-    },
-    "instagram": {
-      "include": ["posts", "info", "avatar"]
-    },
-    "vsco": {
-      "include": "all"
-    }
+    "browser": "chrome"
   }
 }
