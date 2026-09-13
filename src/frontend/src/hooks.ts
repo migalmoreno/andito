@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Extractor, SubCategory } from "~/types";
+import { currentPostUrl, resolveExtractorUrl } from "~/utils";
 
 export const useBreakpoint = () => {
   const breakpoints = {
@@ -59,7 +60,7 @@ export const useFetchOnScroll = <T extends Element>(
 
 export const useNavigateToSubcategory = () => {
   const queryClient = useQueryClient();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
 
   return useCallback(
     async (
@@ -74,15 +75,12 @@ export const useNavigateToSubcategory = () => {
         staleTime: Infinity,
         gcTime: Infinity,
       });
-      const resolvedUrl =
-        ext.filters && ext.filters.length > 0
-          ? ext.url.replace(
-              /(^|[^a-zA-Z0-9])FILTER([^a-zA-Z0-9]|$)/g,
-              `$1${ext.filters[0]}$2`,
-            )
-          : ext.url;
+      const resolvedUrl = resolveExtractorUrl(ext, {
+        filterValue: ext.filters?.[0] ?? "",
+        contextUrl: currentPostUrl(location),
+      });
       navigate(`/post/${encodeURIComponent(resolvedUrl)}`, options);
     },
-    [queryClient, navigate],
+    [queryClient, navigate, location],
   );
 };

@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Category, Extractor, SubCategory } from "~/types";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { useNavigateToSubcategory } from "~/hooks";
+import { resolveExtractorUrl } from "~/utils";
 
 export const SharedNavbarSubMenu = () => {
   const [showMobileMenu, dispatch] = useAppStore(
@@ -149,31 +150,11 @@ const SearchForm = () => {
 
   const buildUrl = (filterValue: string, searchValue: string = "") => {
     if (!extractor) return encodeURIComponent(searchValue);
-    let url = extractor.url;
-    const urlPathParts = url.split("?")[0].split("/").filter(Boolean);
-    const hasQueryGroup = extractor.groups.some((g) => g === "QUERY");
-    for (const [i, group] of extractor.groups.entries()) {
-      if (!group) continue;
-      const raw = group.split("/").filter(Boolean).pop() ?? group;
-      let value: string;
-      if (extractor.filters && raw === "FILTER") {
-        value = filterValue;
-      } else if (
-        hasQueryGroup ? raw === "QUERY" : !extractor.filters && i === 0
-      ) {
-        value = encodeURIComponent(searchValue);
-      } else {
-        const pi = urlPathParts.indexOf(raw);
-        const pattern =
-          pi > 0 ? new RegExp(`/${urlPathParts[pi - 1]}/([^/?#&]+)/`) : null;
-        value = pattern ? (currentPageUrl.match(pattern)?.[1] ?? "") : "";
-      }
-      url = url.replace(
-        new RegExp(`(^|[^a-zA-Z0-9])${raw}([^a-zA-Z0-9]|$)`, "g"),
-        `$1${value}$2`,
-      );
-    }
-    return url;
+    return resolveExtractorUrl(extractor, {
+      filterValue,
+      searchValue,
+      contextUrl: currentPageUrl,
+    });
   };
 
   const onSubmit: SubmitHandler<Inputs> = async (formData) => {
