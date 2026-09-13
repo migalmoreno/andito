@@ -12,7 +12,7 @@ from gallery_dl.extractor import extractors, find as find_extractor
 from werkzeug.exceptions import HTTPException
 from itertools import groupby
 from gallery_dl import config, job
-from flask import Blueprint, request, jsonify, make_response, Response
+from flask import Blueprint, current_app, request, jsonify, make_response, Response
 from urllib.parse import unquote, urlparse, urljoin, quote
 from http import HTTPStatus
 from datetime import datetime
@@ -95,6 +95,7 @@ def handle_cors(response):
 
 @api_v1.errorhandler(HTTPException)
 def handle_http_exception(e):
+    current_app.logger.exception(e)
     response = e.get_response()
     response.data = jsonify(
         {"code": e.code, "name": e.name, "description": e.description}
@@ -105,6 +106,7 @@ def handle_http_exception(e):
 
 @api_v1.errorhandler(NotFoundError)
 def handle_gallery_dl_not_found(e):
+    current_app.logger.exception(e)
     return make_response(
         {
             "message": e.message,
@@ -116,6 +118,7 @@ def handle_gallery_dl_not_found(e):
 
 @api_v1.errorhandler(GalleryDLException)
 def handle_gallery_dl_exception(e):
+    current_app.logger.exception(e)
     status = e.status if hasattr(e, "status") else 500
     return make_response(
         {
