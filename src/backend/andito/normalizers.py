@@ -303,10 +303,44 @@ def _normalize_e88db17b_cf001e7a(data, base_url, url, sub_hash) -> GalleryRespon
         "items": [
             {
                 "thumbnail": urls[i] if i < len(urls) else None,
-                "url": urls[i] if i < len(urls) else None,
+                "url": m.get("post_url"),
             }
-            for i, _ in enumerate(meta)
+            for i, m in enumerate(meta)
         ],
+    }
+
+
+def _normalize_e88db17b_3182dbad(data, base_url, url, sub_hash) -> ImageResponse | dict:
+    meta = data.get("metadata", [])
+    if not meta:
+        return {}
+    m = meta[0]
+    video_url = m.get("video_url")
+    return {
+        "renderer": "image",
+        "url": video_url or m.get("display_url"),
+        "type": "video" if video_url else "image",
+        **(
+            {"videoUrl": video_url, "posterUrl": m.get("display_url")}
+            if video_url
+            else {}
+        ),
+        "description": m.get("description"),
+        "authorName": m.get("username"),
+        **(
+            {"authorUrl": f"{base_url}/{m['username']}"}
+            if m.get("username")
+            else {}
+        ),
+        "date": m.get("date"),
+        **(
+            {"stats": {"likes": m["likes"]}} if m.get("likes") is not None else {}
+        ),
+        **(
+            {"width": m.get("width"), "height": m.get("height")}
+            if m.get("width") and m.get("height")
+            else {}
+        ),
     }
 
 
@@ -1005,6 +1039,13 @@ _NORMALIZERS = {
     ("e88db17b", "a3848f58"): _normalize_e88db17b_a3848f58,
     ("e88db17b", "7f691ebf"): _normalize_e88db17b_7f691ebf,
     ("e88db17b", "cf001e7a"): _normalize_e88db17b_cf001e7a,
+    ("e88db17b", "9a924d10"): _normalize_e88db17b_cf001e7a,
+    ("e88db17b", "166c5e92"): _normalize_e88db17b_cf001e7a,
+    ("e88db17b", "1425585b"): _normalize_e88db17b_cf001e7a,
+    ("e88db17b", "23b5fa29"): _normalize_e88db17b_cf001e7a,
+    ("e88db17b", "3182dbad"): _normalize_e88db17b_3182dbad,
+    ("e88db17b", "b8cce8c3"): _normalize_e88db17b_3182dbad,
+    ("e88db17b", "a75dfb22"): _normalize_e88db17b_3182dbad,
     ("f3a30c28", "3418ee8b"): _normalize_f3a30c28_3418ee8b,
     ("f3a30c28", "246f9606"): _normalize_f3a30c28_246f9606,
     ("f3a30c28", "6b6a3fc1"): _normalize_f3a30c28_6b6a3fc1,
