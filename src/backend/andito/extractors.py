@@ -277,28 +277,28 @@ _DISPATCH_INCLUDE_ALL_CATEGORIES = (
 def apply_extractor_config(category, subcategory, pagination):
     start, end = (int(x) for x in pagination.split("-"))
     page_size = end - start + 1
-
-    config.unset(("extractor",), "image-range")
-    config.unset(("extractor",), "chapter-range")
-    config.unset(("extractor",), "post-range")
+    cfgpath = ("extractor", category, subcategory)
 
     if _fnv1a(category) in _DISPATCH_INCLUDE_ALL_CATEGORIES:
         config.set(("extractor", category), "include", "all")
 
     match (_fnv1a(category), _fnv1a(category + subcategory)):
         case ("e88db17b", _):
-            config.set(("extractor",), "image-range", pagination)
+            config.set(cfgpath, "image-range", pagination)
         case ("b8d92073", "70206412"):
-            config.set(("extractor", category, subcategory), "tiktok-range", pagination)
+            config.set(cfgpath, "tiktok-range", pagination)
+        case ("430e2afe", "ec4a8abd"):
+            config.set(cfgpath, "image-range", pagination)
+            config.set(cfgpath, "chapter-range", pagination)
         case ("c0d3c7b1", "1692405e") | ("03bfedaf", "e7d2ac0d"):
-            config.set(("extractor",), "chapter-range", pagination)
+            config.set(cfgpath, "chapter-range", pagination)
         case ("6987b443", sub) if sub in (
             "45c4d380",
             "d6cf21b3",
             "831a43a1",
             "6b424a7b",
         ):
-            config.set(("extractor",), "chapter-range", pagination)
+            config.set(cfgpath, "chapter-range", pagination)
         case ("fb2fff6e", sub) if sub in (
             "494f3b89",
             "4ebd17e2",
@@ -307,7 +307,7 @@ def apply_extractor_config(category, subcategory, pagination):
             "651df0de",
             "69f3c98a",
         ):
-            config.set(("extractor",), "post-range", pagination)
+            config.set(cfgpath, "post-range", pagination)
         case ("bd300ce5", sub) if sub in (
             "2493dc95",
             "2c906dae",
@@ -323,12 +323,12 @@ def apply_extractor_config(category, subcategory, pagination):
                 ("extractor", "reddit"), "user-agent-oauth", _reddit_android_ua()
             )
             config.set(("extractor", "reddit"), "limit", page_size)
-            config.set(("extractor",), "chapter-range", pagination)
+            config.set(cfgpath, "chapter-range", pagination)
         case ("bd300ce5", _):
             config.set(("extractor", "reddit"), "client-id", _best_reddit_client_id())
             config.set(
                 ("extractor", "reddit"), "user-agent-oauth", _reddit_android_ua()
             )
-            config.set(("extractor",), "image-range", pagination)
+            config.set(cfgpath, "image-range", pagination)
         case _:
-            config.set(("extractor",), "image-range", pagination)
+            config.set(cfgpath, "image-range", pagination)
