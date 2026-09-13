@@ -229,6 +229,10 @@ def apply_extractor_config(category, subcategory, pagination):
     start, end = (int(x) for x in pagination.split("-"))
     page_size = end - start + 1
 
+    config.unset(("extractor",), "image-range")
+    config.unset(("extractor",), "chapter-range")
+    config.unset(("extractor",), "post-range")
+
     if _fnv1a(category) in _DISPATCH_INCLUDE_ALL_CATEGORIES:
         config.set(("extractor", category), "include", "all")
 
