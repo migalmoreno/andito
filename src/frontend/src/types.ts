@@ -99,6 +99,7 @@ export interface UserProfileResponse {
   renderer: "user-profile";
   avatarUrl?: string;
   galleryUrl?: string;
+  galleryRenderer?: "gallery" | "media-board";
 }
 
 export interface BoardItem {

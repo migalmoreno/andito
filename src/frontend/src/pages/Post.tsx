@@ -134,19 +134,19 @@ const UserInfoHeader = ({ data }: { data: UserInfoData }) => (
         </div>
         {data.stats && (
           <div className="flex gap-x-4 text-sm xs:text-base">
-            {data.stats.following && (
+            {(data.stats.following ?? 0) > 0 && (
               <div className="flex gap-x-1">
                 <span className="font-semibold">{data.stats.following}</span>
                 <span className="text-neutral-500">following</span>
               </div>
             )}
-            {data.stats.followers && (
+            {(data.stats.followers ?? 0) > 0 && (
               <div className="flex gap-x-1">
                 <span className="font-semibold">{data.stats.followers}</span>
                 <span className="text-neutral-500">followers</span>
               </div>
             )}
-            {data.stats.mediaCount && (
+            {(data.stats.mediaCount ?? 0) > 0 && (
               <div className="hidden sm:flex gap-x-1">
                 <span className="font-semibold">{data.stats.mediaCount}</span>
                 <span className="text-neutral-500">posts</span>
@@ -191,7 +191,12 @@ const UserInfoUrl = ({ url }: { url: string }) => {
 const UserProfile = ({ data }: { data: UserProfileResponse }) => (
   <div className="flex flex-col flex-auto">
     {data.avatarUrl && <UserInfoUrl url={data.avatarUrl} />}
-    {data.galleryUrl && <Gallery url={data.galleryUrl} />}
+    {data.galleryUrl &&
+      (data.galleryRenderer === "media-board" ? (
+        <MediaBoard url={data.galleryUrl} />
+      ) : (
+        <Gallery url={data.galleryUrl} />
+      ))}
   </div>
 );
 

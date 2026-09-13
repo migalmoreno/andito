@@ -123,6 +123,7 @@ class UserProfileResponse(TypedDict):
     renderer: Literal["user-profile"]
     avatarUrl: NotRequired[str | None]
     galleryUrl: NotRequired[str | None]
+    galleryRenderer: NotRequired[str]
 
 
 class BoardItem(TypedDict):
@@ -269,6 +270,7 @@ def _normalize_e88db17b_a3848f58(data, base_url, url, sub_hash) -> UserProfileRe
         "renderer": "user-profile",
         "avatarUrl": next((u for u in urls if "info" in u), None),
         "galleryUrl": next((u for u in urls if "posts" in u), None),
+        "galleryRenderer": "gallery",
     }
 
 
@@ -327,15 +329,9 @@ def _normalize_e88db17b_3182dbad(data, base_url, url, sub_hash) -> ImageResponse
         ),
         "description": m.get("description"),
         "authorName": m.get("username"),
-        **(
-            {"authorUrl": f"{base_url}/{m['username']}"}
-            if m.get("username")
-            else {}
-        ),
+        **({"authorUrl": f"{base_url}/{m['username']}"} if m.get("username") else {}),
         "date": m.get("date"),
-        **(
-            {"stats": {"likes": m["likes"]}} if m.get("likes") is not None else {}
-        ),
+        **({"stats": {"likes": m["likes"]}} if m.get("likes") is not None else {}),
         **(
             {"width": m.get("width"), "height": m.get("height")}
             if m.get("width") and m.get("height")
@@ -350,6 +346,7 @@ def _normalize_f3a30c28_3418ee8b(data, base_url, url, sub_hash) -> UserProfileRe
         "renderer": "user-profile",
         "avatarUrl": next((u for u in urls if "avatar" in u), None),
         "galleryUrl": next((u for u in urls if "gallery" in u), None),
+        "galleryRenderer": "gallery",
     }
 
 
@@ -545,6 +542,7 @@ def _normalize_b8d92073_f374b090(data, base_url, url, sub_hash) -> UserProfileRe
         "renderer": "user-profile",
         "avatarUrl": next((u for u in urls if "avatar" in u), None),
         "galleryUrl": next((u for u in urls if "posts" in u), None),
+        "galleryRenderer": "gallery",
     }
 
 
@@ -969,9 +967,7 @@ def _normalize_6987b443_45c4d380(data, base_url, url, sub_hash) -> MediaBoardRes
                 "description": post.get("description"),
                 **(
                     {
-                        "date": datetime.utcfromtimestamp(
-                            post["datetime"]
-                        ).isoformat()
+                        "date": datetime.utcfromtimestamp(post["datetime"]).isoformat()
                         + "Z"
                     }
                     if post.get("datetime")
@@ -1017,9 +1013,7 @@ def _normalize_6987b443_831a43a1(data, base_url, url, sub_hash) -> GalleryRespon
                 ),
                 **(
                     {
-                        "date": datetime.utcfromtimestamp(
-                            post["datetime"]
-                        ).isoformat()
+                        "date": datetime.utcfromtimestamp(post["datetime"]).isoformat()
                         + "Z"
                     }
                     if post.get("datetime")
@@ -1050,11 +1044,7 @@ def _normalize_4ef4b826_58c6828b(
         **({"videoUrl": asset_url} if is_video else {}),
         "description": m.get("description"),
         "authorName": user.get("username"),
-        **(
-            {"authorUrl": user["permalink"]}
-            if user.get("permalink")
-            else {}
-        ),
+        **({"authorUrl": user["permalink"]} if user.get("permalink") else {}),
         **(
             {"authorThumbnail": user["large_avatar_url"]}
             if user.get("large_avatar_url")
@@ -1092,9 +1082,7 @@ def _normalize_4ef4b826_c0515ad9(data, base_url, url, sub_hash) -> GalleryRespon
                 "date": m.get("date"),
                 "authorName": (m.get("user") or {}).get("username"),
                 "authorUrl": (m.get("user") or {}).get("permalink"),
-                "authorThumbnail": (m.get("user") or {}).get(
-                    "medium_avatar_url"
-                ),
+                "authorThumbnail": (m.get("user") or {}).get("medium_avatar_url"),
             }
             for i, m in enumerate(meta)
             if m.get("num") == 1
@@ -1129,9 +1117,7 @@ def _normalize_fb2fff6e_897ae881(data, base_url, url, sub_hash) -> UserProfileRe
     }
 
 
-def _normalize_fb2fff6e_13456f80(
-    data, base_url, url, sub_hash
-) -> ImageResponse | dict:
+def _normalize_fb2fff6e_13456f80(data, base_url, url, sub_hash) -> ImageResponse | dict:
     meta = data.get("metadata", [])
     urls = data.get("urls", [])
     if not meta:
@@ -1152,11 +1138,7 @@ def _normalize_fb2fff6e_13456f80(
             if author.get("handle")
             else {}
         ),
-        **(
-            {"authorThumbnail": author["avatar"]}
-            if author.get("avatar")
-            else {}
-        ),
+        **({"authorThumbnail": author["avatar"]} if author.get("avatar") else {}),
         **({"date": m["date"]} if m.get("date") else {}),
         **(
             {"stats": {"likes": m["likeCount"]}}
