@@ -158,6 +158,9 @@ _GROUPS_OVERRIDES = {
     ("f5884405", "9caaf4e9"): {
         "groups": ["QUERY"],
     },
+    ("430e2afe", "6f82efae"): {
+        "groups": ["QUERY"],
+    },
 }
 
 

@@ -1360,6 +1360,109 @@ def _normalize_f5884405_508c0a32(data, base_url, url, sub_hash) -> GalleryRespon
     }
 
 
+def _normalize_430e2afe_2244d6f3(data, base_url, url, sub_hash) -> ImageResponse | dict:
+    meta = data.get("metadata", [])
+    urls = data.get("urls", [])
+    if not meta:
+        return {}
+    m = meta[0]
+    user = m.get("user") or {}
+    is_video = m.get("media") == "video"
+    asset_url = urls[0] if urls else m.get("url")
+    owner_id = user.get("path_alias") or user.get("nsid")
+    icon_farm = user.get("iconfarm")
+    icon_server = user.get("iconserver")
+    author_thumb = (
+        f"https://farm{icon_farm}.staticflickr.com/{icon_server}/buddyicons/{user['nsid']}.jpg"
+        if icon_server and str(icon_server) != "0" and user.get("nsid")
+        else None
+    )
+    return {
+        "renderer": "image",
+        "url": asset_url,
+        "type": "video" if is_video else "image",
+        **({"videoUrl": asset_url} if is_video else {}),
+        "description": m.get("title") or m.get("description"),
+        **({"authorName": user["username"]} if user.get("username") else {}),
+        **({"authorUrl": f"{base_url}/photos/{owner_id}/"} if owner_id else {}),
+        **({"authorThumbnail": author_thumb} if author_thumb else {}),
+        "date": m.get("date"),
+        **({"stats": {"comments": m["comments"]}} if m.get("comments") is not None else {}),
+        **(
+            {"width": m.get("width"), "height": m.get("height")}
+            if m.get("width") and m.get("height")
+            else {}
+        ),
+    }
+
+
+def _normalize_430e2afe_c4d84d31(data, base_url, url, sub_hash) -> GalleryResponse:
+    meta = data.get("metadata", [])
+    urls = data.get("urls", [])
+    items = []
+    for i, m in enumerate(meta):
+        user = m.get("user") or m.get("owner") or {}
+        owner_id = user.get("path_alias") or user.get("nsid")
+        items.append(
+            {
+                "thumbnail": urls[i] if i < len(urls) else m.get("url"),
+                "url": (
+                    f"{base_url}/photos/{owner_id}/{m['id']}"
+                    if owner_id and m.get("id")
+                    else None
+                ),
+                "name": m.get("title"),
+                **({"date": m["date"]} if m.get("date") else {}),
+                **({"authorName": user["username"]} if user.get("username") else {}),
+                **(
+                    {"authorUrl": f"{base_url}/photos/{owner_id}/"}
+                    if owner_id
+                    else {}
+                ),
+            }
+        )
+    return {"renderer": "gallery", "items": items}
+
+
+def _normalize_430e2afe_ec4a8abd(data, base_url, url, sub_hash) -> GalleryResponse:
+    meta = data.get("metadata", [])
+    is_album_listing = bool(meta) and meta[0].get("count_photos") is not None
+    if not is_album_listing:
+        return _normalize_430e2afe_c4d84d31(data, base_url, url, sub_hash)
+    items = []
+    for m in meta:
+        farm, server, primary, secret = (
+            m.get("farm"),
+            m.get("server"),
+            m.get("primary"),
+            m.get("secret"),
+        )
+        thumbnail = (
+            f"https://farm{farm}.staticflickr.com/{server}/{primary}_{secret}_m.jpg"
+            if farm and server and primary and secret
+            else None
+        )
+        owner_id = m.get("username") or m.get("owner")
+        items.append(
+            {
+                "thumbnail": thumbnail,
+                "url": (
+                    f"{base_url}/photos/{owner_id}/albums/{m['id']}"
+                    if owner_id and m.get("id")
+                    else None
+                ),
+                "name": m.get("title"),
+                **({"authorName": m["username"]} if m.get("username") else {}),
+                **(
+                    {"authorUrl": f"{base_url}/photos/{owner_id}/"}
+                    if owner_id
+                    else {}
+                ),
+            }
+        )
+    return {"renderer": "gallery", "items": items}
+
+
 _NORMALIZERS = {
     ("27b9c082", "67b6f7ae"): _normalize_27b9c082_67b6f7ae,
     ("27b9c082", "4b1b2ee4"): _normalize_27b9c082_4b1b2ee4,
@@ -1438,6 +1541,12 @@ _NORMALIZERS = {
     ("f5884405", "11768bac"): _normalize_f5884405_11768bac,
     ("f5884405", "508c0a32"): _normalize_f5884405_508c0a32,
     ("f5884405", "9caaf4e9"): _normalize_f5884405_508c0a32,
+    ("430e2afe", "2244d6f3"): _normalize_430e2afe_2244d6f3,
+    ("430e2afe", "c4d84d31"): _normalize_430e2afe_c4d84d31,
+    ("430e2afe", "542be9b1"): _normalize_430e2afe_c4d84d31,
+    ("430e2afe", "974fecc2"): _normalize_430e2afe_c4d84d31,
+    ("430e2afe", "ec4a8abd"): _normalize_430e2afe_ec4a8abd,
+    ("430e2afe", "6f82efae"): _normalize_430e2afe_c4d84d31,
 }
 
 
