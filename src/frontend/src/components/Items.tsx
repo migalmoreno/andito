@@ -1,8 +1,9 @@
 import { forwardRef, ReactNode, useEffect } from "react";
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, RefreshCwIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useFetchOnScroll } from "~/hooks";
+import { Button } from "./Button";
 import { ErrorContainer } from "./ErrorContainer";
 import { LoadingContainer } from "./LoadingContainer";
 import { NoDataContainer } from "./NoDataContainer";
@@ -12,6 +13,7 @@ const ITEMS_PER_PAGE = 10;
 interface ItemsPaginationContainerProps {
   hasNextPage?: boolean;
   error?: Error | null;
+  onRetry?: () => void;
   children?: ReactNode;
   columns?: string;
   containerClass?: string;
@@ -20,7 +22,7 @@ interface ItemsPaginationContainerProps {
 export const ItemsPaginationContainer = forwardRef<
   HTMLDivElement,
   ItemsPaginationContainerProps
->(({ hasNextPage, error, children, columns, containerClass }, ref) => {
+>(({ hasNextPage, error, onRetry, children, columns, containerClass }, ref) => {
   useEffect(() => {
     if (error)
       toast.error("Failed to load more", { description: error.message });
@@ -32,7 +34,19 @@ export const ItemsPaginationContainer = forwardRef<
       >
         {children}
       </div>
-      {hasNextPage && (
+      {hasNextPage && error && (
+        <div className="p-4 flex w-full justify-center">
+          <Button
+            size="sm"
+            icon={<RefreshCwIcon />}
+            onClick={onRetry}
+            extraClassName="border border-neutral-800"
+          >
+            Retry
+          </Button>
+        </div>
+      )}
+      {hasNextPage && !error && (
         <div ref={ref} className="p-4 flex w-full justify-center">
           <LoaderCircle className="animate-spin" size={32} />
         </div>
@@ -63,6 +77,7 @@ export const ItemsContainer = <T extends { items: I[] }, I>({
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
+    refetch,
   } = useInfiniteQuery({
     queryKey: [`/posts/${url}/normalized`],
     queryFn: async ({ pageParam }) => {
@@ -91,13 +106,15 @@ export const ItemsContainer = <T extends { items: I[] }, I>({
   );
 
   if (isPending) return <LoadingContainer />;
-  if (error && !items?.length) return <ErrorContainer error={error as Error} />;
+  if (error && !items?.length)
+    return <ErrorContainer error={error as Error} onReload={refetch} />;
   if (!items?.length) return <NoDataContainer />;
 
   return (
     <ItemsPaginationContainer
       hasNextPage={hasNextPage}
       error={error as Error}
+      onRetry={fetchNextPage}
       columns={columns}
       containerClass={containerClass}
       ref={ref}

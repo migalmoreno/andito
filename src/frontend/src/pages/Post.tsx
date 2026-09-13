@@ -178,12 +178,13 @@ const UserInfo = ({ data }: { data: UserInfoResponse }) => (
 );
 
 const UserInfoUrl = ({ url }: { url: string }) => {
-  const { data, error } = useQuery<UserInfoResponse>({
+  const { data, error, refetch } = useQuery<UserInfoResponse>({
     queryKey: [`/posts/${encodeURIComponent(url)}`],
     staleTime: Infinity,
     gcTime: Infinity,
   });
-  if (error) return <ErrorContainer error={error as Error} />;
+  if (error)
+    return <ErrorContainer error={error as Error} onReload={refetch} />;
   return data ? <UserInfoHeader data={data} /> : null;
 };
 
@@ -387,6 +388,7 @@ export const PostPage = () => {
     error: postError,
     isPending,
     isFetched,
+    refetch,
   } = useQuery<PageResponse>({
     queryKey: [`/posts/${encodeURIComponent(String(url))}`],
     staleTime: Infinity,
@@ -410,7 +412,8 @@ export const PostPage = () => {
     }
   }, [isPending, isFetched]);
 
-  if (postError) return <ErrorContainer error={postError as Error} />;
+  if (postError)
+    return <ErrorContainer error={postError as Error} onReload={refetch} />;
 
   switch (page?.renderer) {
     case "gallery":

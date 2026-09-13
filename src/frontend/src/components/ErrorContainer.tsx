@@ -1,10 +1,12 @@
-import { CircleAlertIcon } from "lucide-react";
+import { CircleAlertIcon, RefreshCwIcon } from "lucide-react";
+import { Button } from "./Button";
 
 interface ErrorContainerProps {
   error: Error;
+  onReload: () => void;
 }
 
-export const ErrorContainer = ({ error }: ErrorContainerProps) => {
+export const ErrorContainer = ({ error, onReload }: ErrorContainerProps) => {
   return (
     <div className="flex items-center justify-center gap-x-4 w-full lg:max-w-3/4 flex-auto flex-col gap-y-6 p-4 mx-auto">
       <div className="font-semibold text-lg text-red-400 flex items-center gap-x-4">
@@ -16,6 +18,14 @@ export const ErrorContainer = ({ error }: ErrorContainerProps) => {
           {String(error.cause)}
         </span>
       ) : null}
+      <Button
+        size="sm"
+        icon={<RefreshCwIcon />}
+        onClick={onReload}
+        extraClassName="border border-neutral-800"
+      >
+        Reload
+      </Button>
     </div>
   );
 };

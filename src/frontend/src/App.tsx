@@ -25,7 +25,8 @@ const queryClient = new QueryClient({
     queries: {
       refetchOnWindowFocus: false,
       refetchOnMount: false,
-      retry: 0,
+      retry: (failureCount, error) =>
+        failureCount < 2 && !error.message.startsWith("404"),
       queryFn: defaultQueryFn,
     },
   },
