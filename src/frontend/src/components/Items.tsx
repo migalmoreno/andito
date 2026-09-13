@@ -13,6 +13,7 @@ const ITEMS_PER_PAGE = 10;
 interface ItemsPaginationContainerProps {
   hasNextPage?: boolean;
   error?: Error | null;
+  isFetchingNextPage?: boolean;
   onRetry?: () => void;
   children?: ReactNode;
   columns?: string;
@@ -22,38 +23,51 @@ interface ItemsPaginationContainerProps {
 export const ItemsPaginationContainer = forwardRef<
   HTMLDivElement,
   ItemsPaginationContainerProps
->(({ hasNextPage, error, onRetry, children, columns, containerClass }, ref) => {
-  useEffect(() => {
-    if (error)
-      toast.error("Failed to load more", { description: error.message });
-  }, [error]);
-  return (
-    <div className={`flex flex-col p-4 ${containerClass ?? "w-full"}`}>
-      <div
-        className={`grid w-full ${columns ?? "xs:grid-cols-3 lg:grid-cols-5"} gap-4`}
-      >
-        {children}
+>(
+  (
+    {
+      hasNextPage,
+      error,
+      isFetchingNextPage,
+      onRetry,
+      children,
+      columns,
+      containerClass,
+    },
+    ref,
+  ) => {
+    useEffect(() => {
+      if (error)
+        toast.error("Failed to load more", { description: error.message });
+    }, [error]);
+    return (
+      <div className={`flex flex-col p-4 ${containerClass ?? "w-full"}`}>
+        <div
+          className={`grid w-full ${columns ?? "xs:grid-cols-3 lg:grid-cols-5"} gap-4`}
+        >
+          {children}
+        </div>
+        {hasNextPage && error && !isFetchingNextPage && (
+          <div className="p-4 flex w-full justify-center">
+            <Button
+              size="sm"
+              icon={<RefreshCwIcon />}
+              onClick={onRetry}
+              extraClassName="border border-neutral-800"
+            >
+              Retry
+            </Button>
+          </div>
+        )}
+        {hasNextPage && (!error || isFetchingNextPage) && (
+          <div ref={ref} className="p-4 flex w-full justify-center">
+            <LoaderCircle className="animate-spin" size={32} />
+          </div>
+        )}
       </div>
-      {hasNextPage && error && (
-        <div className="p-4 flex w-full justify-center">
-          <Button
-            size="sm"
-            icon={<RefreshCwIcon />}
-            onClick={onRetry}
-            extraClassName="border border-neutral-800"
-          >
-            Retry
-          </Button>
-        </div>
-      )}
-      {hasNextPage && !error && (
-        <div ref={ref} className="p-4 flex w-full justify-center">
-          <LoaderCircle className="animate-spin" size={32} />
-        </div>
-      )}
-    </div>
-  );
-});
+    );
+  },
+);
 
 interface ItemsContainerProps<T extends { items: I[] }, I> {
   url: string;
@@ -114,6 +128,7 @@ export const ItemsContainer = <T extends { items: I[] }, I>({
     <ItemsPaginationContainer
       hasNextPage={hasNextPage}
       error={error as Error}
+      isFetchingNextPage={isFetchingNextPage}
       onRetry={fetchNextPage}
       columns={columns}
       containerClass={containerClass}
