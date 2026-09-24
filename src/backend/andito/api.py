@@ -66,6 +66,15 @@ def handle_gallery_dl_exception(e):
     )
 
 
+@api_v1.errorhandler(AbortExtraction)
+def handle_abort_extraction(e):
+    url = unquote(request.view_args.get("url", "")) if request.view_args else ""
+    extractor = find_extractor(url)
+    if extractor and _fnv1a(extractor.category) == "bd300ce5":
+        mark_reddit_client_id_failed()
+    return handle_gallery_dl_exception(e)
+
+
 @api_v1.route("/health")
 def health():
     return make_response()
@@ -312,12 +321,7 @@ def posts(url=""):
             f"{pagination_start}-{pagination_end}",
         )
 
-    try:
-        post = download_post(parsed_url)
-    except AbortExtraction:
-        if extractor and _fnv1a(extractor.category) == "bd300ce5":
-            mark_reddit_client_id_failed()
-        raise
+    post = download_post(parsed_url)
 
     if extractor:
         category, subcategory = extractor._cfgpath[1], extractor._cfgpath[2]
