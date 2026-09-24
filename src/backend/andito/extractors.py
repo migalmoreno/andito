@@ -7,7 +7,9 @@ from gallery_dl import config
 from gallery_dl.extractor import extractors
 from gallery_dl.extractor.common import Message
 from gallery_dl import text as _gdl_text
+from gallery_dl import util as _gdl_util
 from gallery_dl.extractor.reddit import RedditAPI as _RedditAPI
+from gallery_dl.extractor.instagram import InstagramAPI as _InstagramAPI
 from .utils import fnv1a as _fnv1a
 
 _by_key = {
@@ -190,6 +192,125 @@ def _patch_f5884405_items(self):
         yield Message.Url, card["url"], card
 
 
+def _instagram_anon_graphql(extr, query_name, doc_id, variables):
+    fb_lsd = _gdl_util.generate_token()
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+        # Force this specific request to go out logged-out even if the
+        # extractor has a real sessionid cookie configured - these doc_ids
+        # are the queries instagram.com itself uses for signed-out
+        # visitors, and mixing in an authenticated cookie breaks them.
+        "Cookie": None,
+        # The WAF scoring on these endpoints appears to key off client-hint
+        # headers being present, not just UA - omitting them causes
+        # intermittent "Your Request Couldn't be Processed" rejections.
+        "Sec-CH-UA": '"Chromium";v="135", "Not)A;Brand";v="24"',
+        "Sec-CH-UA-Mobile": "?0",
+        "X-CSRFToken": extr.csrf_token,
+        "X-FB-Friendly-Name": query_name,
+        "X-FB-LSD": fb_lsd,
+        "X-IG-App-ID": "936619743392459",
+        "X-IG-Max-Touch-Points": "0",
+    }
+    body = {
+        "av": "0",
+        "__d": "www",
+        "__user": "0",
+        "__a": "1",
+        "__hs": "20681.HYP:instagram_web_pkg.2.1...0",
+        "dpr": "1",
+        "__ccg": "EXCELLENT",
+        "__rev": "1045311908",
+        "__hsi": "7674722996112187910",
+        "__comet_req": "7",
+        "lsd": fb_lsd,
+        "jazoest": "26461",
+        "__spin_r": "1045311908",
+        "__spin_b": "trunk",
+        "fb_api_caller_class": "RelayModern",
+        "fb_api_req_friendly_name": query_name,
+        "server_timestamps": "true",
+        "variables": _gdl_util.json_dumps(variables),
+        "doc_id": doc_id,
+    }
+    return extr.request_json(
+        "https://www.instagram.com/api/graphql",
+        method="POST",
+        headers=headers,
+        data=body,
+    )
+
+
+_instagram_media_orig = _InstagramAPI.media
+
+
+def _patch_e88db17b_media(self, shortcode):
+    extr = self.extractor
+    if len(shortcode) > 28:
+        shortcode = shortcode[:-28]
+
+    try:
+        data = _instagram_anon_graphql(
+            extr,
+            "PolarisPostRootQuery",
+            "26713194205046842",
+            {
+                "shortcode": shortcode,
+                "__relay_internal__pv__"
+                "PolarisAIGMMediaWebLabelEnabledrelayprovider": False,
+            },
+        )
+        info = data["data"]["xdt_api__v1__media__shortcode__web_info"]
+        if info is None:
+            raise LookupError(shortcode)
+        items = info["items"]
+    except Exception:
+        extr.log.debug(
+            "Anonymous fetch failed for %s, falling back to the "
+            "authenticated endpoint",
+            shortcode,
+        )
+        yield from _instagram_media_orig(self, shortcode)
+        return
+
+    yield from items
+
+
+_instagram_user_by_screen_name_orig = _InstagramAPI.user_by_screen_name
+
+
+def _patch_e88db17b_user_by_screen_name(self, screen_name):
+    extr = self.extractor
+
+    try:
+        data = _instagram_anon_graphql(
+            extr,
+            "PolarisLoggedOutDesktopWWWProfileRootContentQuery",
+            "27981003384861049",
+            {"username": screen_name},
+        )
+        user = data["data"]["xig_user_by_username"]
+        if user is None:
+            raise LookupError(screen_name)
+    except Exception:
+        extr.log.debug(
+            "Anonymous lookup failed for %s, falling back to the "
+            "configured user-strategy",
+            screen_name,
+        )
+        return _instagram_user_by_screen_name_orig(self, screen_name)
+
+    # This response is flatter than the private-API shape the rest of
+    # InstagramAPI expects (edge_* connection counts, an _hd avatar
+    # variant) - alias it instead of adding a second field-name convention
+    # downstream.
+    user.setdefault("profile_pic_url_hd", user.get("profile_pic_url"))
+    user["edge_owner_to_timeline_media"] = {"count": user.get("all_media_count", 0)}
+    user["edge_followed_by"] = {"count": user.get("follower_count", 0)}
+    user["edge_follow"] = {"count": user.get("following_count", 0)}
+    return user
+
+
 for _cls, _attr, _fn in [
     (_03bfedaf_25ba7f3f, "items", _patch_03bfedaf_25ba7f3f),
     (_03bfedaf_e7d2ac0d, "items", _patch_03bfedaf_e7d2ac0d),
@@ -201,6 +322,8 @@ for _cls, _attr, _fn in [
     (_f5884405_508c0a32, "items", _patch_f5884405_items),
     (_f5884405_9caaf4e9, "_pagination", _patch_f5884405_pagination),
     (_f5884405_9caaf4e9, "items", _patch_f5884405_items),
+    (_InstagramAPI, "media", _patch_e88db17b_media),
+    (_InstagramAPI, "user_by_screen_name", _patch_e88db17b_user_by_screen_name),
 ]:
     if _cls:
         setattr(_cls, _attr, _fn)
