@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Link } from "wouter";
 import ShakaVideo from "shaka-video-element/react";
 import { GalleryItem, BoardItem, ThreadPost, ThreadResponse } from "~/types";
@@ -181,19 +182,30 @@ export const ThreadPostContainer = ({ post }: ThreadPostContainerProps) => {
     }
   }, [showReplies]);
 
-  const { data: repliesData, isFetching: repliesFetching } =
-    useQuery<ThreadResponse>({
-      enabled: !!currentReplyUrl,
-      queryKey: [`/posts/${encodeURIComponent(currentReplyUrl ?? "")}`],
-      staleTime: Infinity,
-      gcTime: Infinity,
-    });
+  const {
+    data: repliesData,
+    error: repliesError,
+    isFetching: repliesFetching,
+    refetch: refetchReplies,
+  } = useQuery<ThreadResponse>({
+    enabled: !!currentReplyUrl,
+    queryKey: [`/posts/${encodeURIComponent(currentReplyUrl ?? "")}`],
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
 
   useEffect(() => {
     if (!repliesData) return;
     setAllReplies((prev) => [...prev, ...(repliesData.items ?? [])]);
     setReplyNextUrl(repliesData.nextUrl ?? null);
   }, [repliesData]);
+
+  useEffect(() => {
+    if (repliesError)
+      toast.error("Failed to load replies", {
+        description: (repliesError as Error).message,
+      });
+  }, [repliesError]);
   const proxyUrl = (u: string) =>
     `${import.meta.env.VITE_API_URL}/api/v1/proxy?url=${encodeURIComponent(u)}`;
   const isVideo =
@@ -354,7 +366,7 @@ export const ThreadPostContainer = ({ post }: ThreadPostContainerProps) => {
       )}
       {post?.repliesUrl && (
         <button
-          className="text-xs text-indigo-400 hover:text-indigo-300 self-start"
+          className="text-xs text-indigo-400 hover:text-indigo-300 self-start cursor-pointer"
           onClick={() => setShowReplies((v) => !v)}
         >
           {showReplies ? "Hide replies" : "View replies"}
@@ -368,7 +380,15 @@ export const ThreadPostContainer = ({ post }: ThreadPostContainerProps) => {
           {repliesFetching && (
             <span className="text-xs text-neutral-500">Loading...</span>
           )}
-          {!repliesFetching && replyNextUrl && (
+          {!repliesFetching && repliesError && (
+            <button
+              className="text-xs text-indigo-400 hover:text-indigo-300 self-start"
+              onClick={() => refetchReplies()}
+            >
+              Retry
+            </button>
+          )}
+          {!repliesFetching && !repliesError && replyNextUrl && (
             <button
               className="text-xs text-indigo-400 hover:text-indigo-300 self-start"
               onClick={() => setCurrentReplyUrl(replyNextUrl)}
